@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+
+        <Button
+            android:id="@+id/btn_no_params_get"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="无参get" />
+
+        <Button
+            android:id="@+id/btn_no_params_path_get"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="无参(Url变化path注解使用)get,"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btn_params_get"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="有参get" />
+
+        <Button
+            android:id="@+id/btn_url"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="直接传入Url"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btn_normal_post"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Post不带参数url" />
+
+
+        <Button
+            android:id="@+id/btn_params_post"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Post带参数(表单上传)"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btn_json_post"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Post提交Json"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btn_upload_post"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Post文件上传"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btn_download_post"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Post文件下载"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:id="@+id/tv_show_result"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+
+    </LinearLayout>
+
+</ScrollView>
