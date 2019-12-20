@@ -1,5 +1,7 @@
 apply plugin: 'com.android.library'
-
+//上传依赖配置
+apply plugin: 'com.github.dcendents.android-maven'
+group='com.github.paihuai00'
 android {
   compileSdkVersion 27
 
