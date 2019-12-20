@@ -1,5 +1,6 @@
 package com.csx.retrofitdemo;
 
+import io.reactivex.Observable;
 import java.util.Map;
 
 import okhttp3.MultipartBody;
@@ -33,24 +34,24 @@ public interface ApiServices {
     //=============   GET   =========================
     //无参数
     @GET("6/1")
-    Call<ResponseBody> getGirlData();
+    Observable<ResponseBody> getGirlData();
 
     //无参，改变url
     //例如：下面mouth，会将@GET()中的{mouth}替换掉，达到动态url的效果
     @GET("{mouth}/{day}")
-    Call<ResponseBody> getGirlDataByDate(@Path("mouth") String mouth,
+    Observable<ResponseBody> getGirlDataByDate(@Path("mouth") String mouth,
                                          @Path("day") String day);
 
     //有参数get
     @GET("v5/hourly")
-    Call<WeatherBean> getWeatherData(@Query("city") String city,
+    Observable<WeatherBean> getWeatherData(@Query("city") String city,
                                      @Query("key") String key);
 
     Call<WeatherBean> getWeatherData(@QueryMap Map<String, String> params);
 
     //直接传入url
     @GET
-    Call<ResponseBody> getDataByUrl(@Url String url);
+    Observable<ResponseBody> getDataByUrl(@Url String url);
     /**
      * 文件下载
      * @return

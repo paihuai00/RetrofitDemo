@@ -34,5 +34,15 @@ public class WeatherBean {
         public void setStatus(String status) {
             this.status = status;
         }
+
+        @Override
+        public String toString() {
+            return "HeWeather5Bean{" + "status='" + status + '\'' + '}';
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "WeatherBean{" + "HeWeather5=" + HeWeather5.toString() + '}';
     }
 }

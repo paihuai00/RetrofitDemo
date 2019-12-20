@@ -1,6 +1,7 @@
 package com.netlibrary;
 
 import android.content.Context;
+import com.ihsanbal.logging.Level;
 import java.io.File;
 import okhttp3.Interceptor;
 
@@ -13,11 +14,13 @@ public class RetrofitController {
     public Context mContext;
     public File fileCache;//缓存路径
     public String baseUrl;
+    public Class apiClass;
     public boolean isPrintLog = true;//是否打印日志
     public long retryTimeOut;
     public long timeOut;//
     public long readTimeOut;
     public long cacheSize;//缓存大小
+    public Level mLogLevel;
 
     //
     public Interceptor[] interceptors;
