@@ -2,7 +2,7 @@
 
 [官网](https://square.github.io/retrofit/)
 
-#### 一、注解说明
+## 一、注解说明
 
 **1，常用请求方法注解**
 
@@ -44,7 +44,7 @@
 
 
 
-#### 一、Get请求 **@GET**
+## 二、Get请求 **@GET**
 
 **1，无参Get**
 
@@ -76,7 +76,7 @@
 
 
 
-##### 二、Post请求 **@Post**
+## 三、Post请求 **@Post**
 1，post上传**json字符串**，需要使用 `@Body` 有两种方式
 
 - 使用bean对象
@@ -160,6 +160,6 @@ Call<ResponseBody> upload(@Body MultipartBody multipartBody);
 - 用`@Body`注解方法参数，类型是`MultipartBody`
 
 
-##### 三、请求头
+## 四、请求头
  - **@Headers**： 用于添加固定请求头，可以同时添加多个。通过该注解添加的请求头不会相互覆盖，而是共同存在
 - **@Header**：作为方法的参数传入，用于添加不固定值的Header，该注解会更新已有的请求头
