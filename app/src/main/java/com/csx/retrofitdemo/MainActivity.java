@@ -192,7 +192,8 @@ public class MainActivity extends AppCompatActivity {
         String baseUrl = "https://free-api.heweather.com/";
 
         RetrofitManager<ApiServices> retrofitManager =
-                new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
+                new RetrofitManager.NetBuilder(this)
+                        .setBaseUrl(baseUrl)
                         .setApiClass(ApiServices.class)
                         //.setIsPrintLog(true)
                         .build();

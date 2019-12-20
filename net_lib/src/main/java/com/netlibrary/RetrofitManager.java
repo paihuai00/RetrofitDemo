@@ -3,8 +3,12 @@ package com.netlibrary;
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
+import com.franmontiel.persistentcookiejar.PersistentCookieJar;
+import com.franmontiel.persistentcookiejar.cache.SetCookieCache;
+import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor;
 import com.ihsanbal.logging.Level;
 import com.ihsanbal.logging.LoggingInterceptor;
+import com.netlibrary.net_utils.HttpSslUtils;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 import okhttp3.Cache;
@@ -30,27 +34,17 @@ public class RetrofitManager<T> {
     private long readTimeOut = 60;
     private long cacheSize = 20 * 1024 * 1024;//缓存大小为：20m
     private File fileCache;//缓存路径
-
-    //默认Retrofit实例
     private static Retrofit normalRetrofit;
     private static String baseUrl;//需要设置baseUrl
-
-    //private static Retrofit otherRetrofit;
-
-    //private static HashMap<String, List<Cookie>> cookieStore = new HashMap<>();
-
-    private  Context context;
-
+    private Context context;
     private Class<T> apiClass;
-
     private boolean isShowLog = true;//是否显示日志
     private Interceptor[] interceptors;//拦截器
-
-    //日志打印级别，默认是 BASIC
-    private Level mLevel = Level.BASIC;
-
-    //如果api比较多的时候，可以考虑通过map、存储创建的apis
-    //    private Map<Class<?>, Object> apis = new HashMap<>();
+    private Level mLevel = Level.BASIC; //日志打印级别，默认是 BASIC
+    public boolean isNeedPersistentCookie = false;//是否需要持久化cookie
+    private boolean isTrustAllCer = false;//是否相信所有证书
+    private String cerString;//证书string
+    private int[] cerResIds;//证书资源
 
     private RetrofitManager(Context context) {
         this.context = context;
@@ -60,10 +54,12 @@ public class RetrofitManager<T> {
         NetLogUtil.init(isShowLog, isShowLog);
     }
 
+    /*设置重连时间*/
     public void setRetryTimeOut(long retryTimeOut) {
         this.retryTimeOut = retryTimeOut;
     }
 
+    /*设置连接超时时间*/
     public void setConnectTimeOut(long connectTimeOut) {
         this.connectTimeOut = connectTimeOut;
     }
@@ -101,11 +97,27 @@ public class RetrofitManager<T> {
         this.mLevel = level;
     }
 
-    /**
-     * 动态添加拦截器
-     */
-    public void setsetInterceptors(Interceptor... interceptors) {
+    /*动态添加拦截器*/
+    public void setInterceptors(Interceptor... interceptors) {
         this.interceptors = interceptors;
+    }
+
+    private void setPersistentCookie(boolean isNeedPersistentCookie) { this.isNeedPersistentCookie = isNeedPersistentCookie; }
+
+
+    //是否相信所有证书
+    private void setTrustAllCertificate(boolean isTrustALL) {
+        this.isTrustAllCer = isTrustALL;
+    }
+
+    //相信指定证书
+    private void setTrustCertificate(String certificateString) {
+        this.cerString = certificateString;
+    }
+
+    //相信指定证书
+    private void setTrustCertificate(int... certificateRes) {
+        this.cerResIds = certificateRes;
     }
 
     /**
@@ -151,16 +163,17 @@ public class RetrofitManager<T> {
      */
     private void initOkhttpClient() {
         if (okHttpClient == null) {
-            OkHttpClient.Builder builder = new OkHttpClient.Builder().readTimeout(retryTimeOut, TimeUnit.SECONDS)
+            OkHttpClient.Builder builder =
+                    new OkHttpClient.Builder().readTimeout(retryTimeOut, TimeUnit.SECONDS)
                             .retryOnConnectionFailure(true)
                             .cache(new Cache(fileCache, cacheSize))//缓存
                             .connectTimeout(connectTimeOut, TimeUnit.SECONDS)
                             .readTimeout(readTimeOut, TimeUnit.SECONDS);
 
-                    // 信任Https,忽略Https证书验证
-                    // https认证,如果要使用https且为自定义证书 可以去掉这两行注释，并自行配制证书。
-                    //.sslSocketFactory(SSLSocketTrust.getSSLSocketFactory())
-                    //.hostnameVerifier(SSLSocketTrust.getHostnameVerifier())
+            // 信任Https,忽略Https证书验证
+            // https认证,如果要使用https且为自定义证书 可以去掉这两行注释，并自行配制证书。
+            //.sslSocketFactory(SSLSocketTrust.getSSLSocketFactory())
+            //.hostnameVerifier(SSLSocketTrust.getHostnameVerifier())
 
             //用于打印网络请求
             if (isShowLog) {
@@ -169,13 +182,13 @@ public class RetrofitManager<T> {
                 //logInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);//打印请求体
                 //builder.addInterceptor(logInterceptor);
 
-                LoggingInterceptor loggingInterceptor = new LoggingInterceptor.Builder()
-                        .log(Platform.INFO)
-                        .loggable(true)
-                        .setLevel(mLevel)
-                        .request("Net_Request")
-                        .response("Net_Response")
-                        .build();
+                LoggingInterceptor loggingInterceptor =
+                        new LoggingInterceptor.Builder().log(Platform.INFO)
+                                .loggable(true)
+                                .setLevel(mLevel)
+                                .request("Net_Request")
+                                .response("Net_Response")
+                                .build();
                 builder.addInterceptor(loggingInterceptor);
             }
 
@@ -183,6 +196,23 @@ public class RetrofitManager<T> {
             if (interceptors != null && interceptors.length != 0) {
                 for (Interceptor i : interceptors) {
                     builder.addInterceptor(i);
+                }
+            }
+
+            if (isNeedPersistentCookie) {
+                PersistentCookieJar cookieJar=new PersistentCookieJar(new SetCookieCache(), new SharedPrefsCookiePersistor(context));
+                builder.cookieJar(cookieJar);
+            }
+
+            //证书
+            if (isTrustAllCer) {
+                HttpSslUtils.setTrustAllCertificate(builder);
+            } else {
+                if (!TextUtils.isEmpty(cerString)){
+                    HttpSslUtils.setCertificate(context,builder,cerString);
+                }
+                if (cerResIds != null && cerResIds.length != 0) {
+                    HttpSslUtils.setCertificates(context,builder,cerResIds);
                 }
             }
 
@@ -259,6 +289,30 @@ public class RetrofitManager<T> {
             return this;
         }
 
+        //持久化Cookie
+        public NetBuilder setPersistentCookic(boolean isNeedCookie) {
+            retrofitController.isNeedPersistentCookie = isNeedCookie;
+            return this;
+        }
+
+        //是否相信所有证书
+        public NetBuilder setTrustAllCertificate(boolean isTrustALL) {
+            retrofitController.isTrustAllCer = isTrustALL;
+            return this;
+        }
+
+        //相信指定证书
+        public NetBuilder setTrustCertificate(String certificateString) {
+            retrofitController.cerString = certificateString;
+            return this;
+        }
+
+        //相信指定证书
+        public NetBuilder setTrustCertificate(int... certificateRes) {
+            retrofitController.cerResIds = certificateRes;
+            return this;
+        }
+
         public RetrofitManager build() {
             RetrofitManager retrofitManager = new RetrofitManager(retrofitController.mContext);
 
@@ -287,8 +341,22 @@ public class RetrofitManager<T> {
                 retrofitManager.setReadTimeOut(retrofitController.readTimeOut);
             }
 
+            if (retrofitController.interceptors!=null&&retrofitController.interceptors.length!=0)
+                retrofitManager.setInterceptors(retrofitController.interceptors);
+
             //是否打印日志，默认都是true
             retrofitManager.setIsPrintLog(retrofitController.isPrintLog);
+
+            //设置 Log 级别
+            retrofitManager.setLogLevel(retrofitController.mLogLevel);
+
+            //Cookie
+            retrofitManager.setPersistentCookie(retrofitController.isNeedPersistentCookie);
+
+            //证书
+            retrofitManager.setTrustAllCertificate(retrofitController.isTrustAllCer);
+            retrofitManager.setTrustCertificate(retrofitManager.cerString);
+            retrofitManager.setTrustCertificate(retrofitManager.cerResIds);
 
             if (retrofitController.timeOut != 0) {
                 retrofitManager.setConnectTimeOut(retrofitController.timeOut);
@@ -297,4 +365,6 @@ public class RetrofitManager<T> {
             return retrofitManager;
         }
     }
+
+
 }
