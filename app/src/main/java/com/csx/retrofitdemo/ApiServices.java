@@ -1,6 +1,8 @@
 package com.csx.retrofitdemo;
 
+import com.csx.retrofitdemo.beans.VideoJsonBean;
 import io.reactivex.Observable;
+import java.util.List;
 import java.util.Map;
 
 import okhttp3.MultipartBody;
@@ -21,6 +23,7 @@ import retrofit2.http.PartMap;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 import retrofit2.http.QueryMap;
+import retrofit2.http.Streaming;
 import retrofit2.http.Url;
 
 /**
@@ -54,16 +57,18 @@ public interface ApiServices {
     Observable<ResponseBody> getDataByUrl(@Url String url);
     /**
      * 文件下载
-     * @return
+     *
+     * 大文件的时候，要加：@Streaming 不然会报OOM
      */
+    @Streaming
     @GET("2012031220134655.jpg")
-    Call<ResponseBody> downLoadFile();
+    Observable<ResponseBody> downLoadFile();
 
 
     //=============   POST   =========================
 
-    @POST("20/1")
-    Call<ResponseBody> postGirlData();
+    @POST("/hotkey/json")
+    Observable<ResponseBody> postWithOutParams();
 
     /**
      * 表单上传，需要添加{@link retrofit2.http.FormUrlEncoded} 注解
@@ -75,7 +80,7 @@ public interface ApiServices {
      */
     @FormUrlEncoded
     @POST("football/league")
-    Call<ResponseBody> postFootBallData(@Field("key") String key,
+    Observable<ResponseBody> postFootBallData(@Field("key") String key,
                                         @Field("league") String league);
 
 
@@ -85,19 +90,26 @@ public interface ApiServices {
      * @return
      */
     @Headers("Content-Type: application/json")//声明为json
-    @POST("api/data")
-    Call<PostJsonBean> postJsonData(@Body PostJsonBean jsonBean);
+    @POST("xbqs/user/GetUserVideoListPage")
+    Observable<ResponseBody> postJsonBean(@Body VideoJsonBean jsonBean);
 
     /**
-     * 文件上传
-     * @param file
-     * @return
+     * 上传 json 到服务器
      */
-    @Multipart//@Multipart 专门用于文件上传的注解
-    @POST("ddd")
-    Call<ResponseBody> postFile(
-            @PartMap Map<String, RequestBody> params,
-            @Part MultipartBody.Part file);
+    @POST("xbqs/user/GetUserVideoListPage")
+    Observable<ResponseBody> postJsonRequestBody(@Body RequestBody requestBody);
+
+    /**
+     * 文件上传 图片
+     * post: http://118.123.20.133:8080/xbqs/Attachment/UploadAttach
+     *
+     * body:formData
+     *
+     * @Multipart 专门用于文件上传的注解
+     */
+    @Multipart
+    @POST("xbqs/Attachment/UploadAttach")
+    Observable<ResponseBody> upLoadFile(@Part List<MultipartBody.Part> parts);
 
 
     @Headers("Cache-Control: max-age=640000")//静态添加单个header

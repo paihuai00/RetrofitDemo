@@ -19,6 +19,14 @@
             android:gravity="center"
             android:text="点击按钮即可对应请求，结果会在底部文本显示"/>
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="@color/colorAccent"
+            android:layout_marginTop="10dp"
+            android:text="测试接口源自网络，都经过测试\n如果不通看项目实例代码,替换自己的接口即可"/>
+
         <Button
             android:id="@+id/btn_no_params_get"
             android:layout_width="match_parent"
@@ -59,11 +67,19 @@
             android:text="Post带参数(表单上传)"
             android:textAllCaps="false" />
 
+
         <Button
             android:id="@+id/btn_json_post"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Post提交Json"
+            android:text="Post提交Json - 直接上传对象"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btn_json_post_requestbody"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Post提交Json - RequestBody"
             android:textAllCaps="false" />
 
         <Button

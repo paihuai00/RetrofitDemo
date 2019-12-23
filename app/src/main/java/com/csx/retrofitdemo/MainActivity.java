@@ -1,6 +1,11 @@
 package com.csx.retrofitdemo;
 
+import android.Manifest;
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
+import android.support.annotation.Nullable;
+import android.support.annotation.WorkerThread;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -8,16 +13,28 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.csx.retrofitdemo.beans.VideoJsonBean;
+import com.csx.retrofitdemo.utils.PictureUtils;
+import com.csx.retrofitdemo.utils.RxPermissionUtils;
+import com.luck.picture.lib.PictureSelector;
+import com.luck.picture.lib.entity.LocalMedia;
+import com.netlibrary.NetLogUtil;
 import com.netlibrary.RetrofitManager;
+import com.netlibrary.impls.DownLoadImpl;
+import com.netlibrary.net_utils.DownLoadUtils;
+import com.netlibrary.net_utils.RetrofitHelper;
 import com.netlibrary.net_utils.SchedulersHelper;
 import io.reactivex.Observable;
 import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import butterknife.BindView;
@@ -25,7 +42,6 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
-import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -33,8 +49,10 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.http.Multipart;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
+import retrofit2.http.Streaming;
 import retrofit2.http.Url;
 
 public class MainActivity extends AppCompatActivity {
@@ -50,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.btn_json_post) Button mBtnJsonPost;
     @BindView(R.id.btn_upload_post) Button mBtnUploadPost;
     @BindView(R.id.btn_download_post) Button mBtnDownloadPost;
+    @BindView(R.id.btn_json_post_requestbody) Button mBtnJsonRequest;
+    private String imageLocalPath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -192,15 +212,15 @@ public class MainActivity extends AppCompatActivity {
         String baseUrl = "https://free-api.heweather.com/";
 
         RetrofitManager<ApiServices> retrofitManager =
-                new RetrofitManager.NetBuilder(this)
-                        .setBaseUrl(baseUrl)
+                new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
                         .setApiClass(ApiServices.class)
                         //.setIsPrintLog(true)
                         .build();
 
         ApiServices serivces = retrofitManager.getInstance();
 
-        Observable<ResponseBody> call = serivces.getDataByUrl("http://gank.io/api/data/%E7%A6%8F%E5%88%A9/6/1");
+        Observable<ResponseBody> call =
+                serivces.getDataByUrl("http://gank.io/api/data/%E7%A6%8F%E5%88%A9/6/1");
         call.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
                 .subscribe(new Consumer<ResponseBody>() {
                     @Override
@@ -212,7 +232,6 @@ public class MainActivity extends AppCompatActivity {
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
-
                     }
                 }, new Consumer<Throwable>() {
                     @Override
@@ -220,195 +239,317 @@ public class MainActivity extends AppCompatActivity {
                         mTvShowResult.setText(throwable.getMessage());
                     }
                 });
-
     }
 
     //post 不带参数
-    private void postGirl() {
-        Retrofit retrofit =
-                new Retrofit.Builder().baseUrl("http://gank.io/api/data/%E7%A6%8F%E5%88%A9/")
-                        .addConverterFactory(GsonConverterFactory.create())
+    private void postWithOutParams() {
+        String baseUrl = "https://www.wanandroid.com/";
+
+        RetrofitManager<ApiServices> retrofitManager =
+                new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
+                        .setApiClass(ApiServices.class)
+                        //.setIsPrintLog(true)
                         .build();
 
-        ApiServices apiServices = retrofit.create(ApiServices.class);
+        ApiServices serivces = retrofitManager.getInstance();
 
-        Call<ResponseBody> call = apiServices.postGirlData();
+        Observable<ResponseBody> responseBodyObservable = serivces.postWithOutParams();
 
-        call.enqueue(new Callback<ResponseBody>() {
-            @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                //主线程
-                Log.d(TAG, "onResponse: ");
-                String successData = null;
-                try {
-                    successData = response.body().string();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                mTvShowResult.setText(successData);
-            }
-
-            @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
-                //主线程
-                Log.d(TAG, "onFailure: " + t.getMessage().toString());
-                mTvShowResult.setText(t.getMessage());
-            }
-        });
+        responseBodyObservable.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
+                .subscribe(new Consumer<ResponseBody>() {
+                    @Override
+                    public void accept(ResponseBody responseBody) throws Exception {
+                        String successData = null;
+                        try {
+                            successData = responseBody.string();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        mTvShowResult.setText(successData);
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable throwable) throws Exception {
+                        NetLogUtil.d(TAG + " post 不带参数 " + throwable.getMessage());
+                        mTvShowResult.setText("post 不带参数:  请求失败");
+                    }
+                });
     }
 
     //post 带参数
     private void postParamsFootBallData() {
-        Retrofit retrofit = new Retrofit.Builder().baseUrl("http://op.juhe.cn/onebox/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
+        String baseUrl = "http://op.juhe.cn/onebox/";
 
-        ApiServices apiServices = retrofit.create(ApiServices.class);
+        RetrofitManager<ApiServices> retrofitManager =
+                new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
+                        .setApiClass(ApiServices.class)
+                        //.setIsPrintLog(true)
+                        .build();
 
-        Call<ResponseBody> call =
+        ApiServices apiServices = retrofitManager.getInstance();
+
+        Observable<ResponseBody> observable =
                 apiServices.postFootBallData("02da4926376156643455fafa48982456", "中超");
 
-        call.enqueue(new Callback<ResponseBody>() {
-            @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                //主线程
-                Log.d(TAG, "onResponse: ");
-                String successData = null;
-                try {
-                    successData = response.body().string();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                mTvShowResult.setText(successData);
-            }
-
-            @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
-                //主线程
-                Log.d(TAG, "onFailure: " + t.getMessage().toString());
-                mTvShowResult.setText(t.getMessage());
-            }
-        });
-    }
-
-    //post Json
-    private void postJson() {
-        Toast.makeText(getApplicationContext(), "post Json，接口为假具体使用请查看注释！", Toast.LENGTH_SHORT)
-                .show();
-
-        if (1 == 2) {
-            Retrofit retrofit = new Retrofit.Builder().baseUrl("")
-                    .addConverterFactory(GsonConverterFactory.create())
-                    .build();
-
-            ApiServices apiServices = retrofit.create(ApiServices.class);
-
-            //这里将对象传入进去
-            Call<PostJsonBean> call = apiServices.postJsonData(new PostJsonBean());
-
-            call.enqueue(new Callback<PostJsonBean>() {
-                @Override
-                public void onResponse(Call<PostJsonBean> call, Response<PostJsonBean> response) {
-                    //主线程
-                    Log.d(TAG, "onResponse: ");
-                    PostJsonBean successData = null;
-                    try {
-                        successData = response.body();
-                    } catch (Exception e) {
-                        e.printStackTrace();
+        observable.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
+                .subscribe(new Consumer<ResponseBody>() {
+                    @Override
+                    public void accept(ResponseBody responseBody) throws Exception {
+                        //主线程
+                        Log.d(TAG, "onResponse: ");
+                        String successData = null;
+                        try {
+                            successData = responseBody.string();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        mTvShowResult.setText(successData);
                     }
-                    mTvShowResult.setText(successData.toString());
-                }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable t) throws Exception {
+                        //主线程
+                        Log.d(TAG, "onFailure: " + t.getMessage().toString());
+                        mTvShowResult.setText(t.getMessage());
+                    }
+                });
+    }
 
-                @Override
-                public void onFailure(Call<PostJsonBean> call, Throwable t) {
-                    //主线程
-                    Log.d(TAG, "onFailure: " + t.getMessage().toString());
-                    mTvShowResult.setText(t.getMessage());
-                }
-            });
+    /**
+     * post Json
+     * 方式1:  构建对象@Body对象上传
+     */
+    private void postJsonBean() {
+        // http://118.123.20.133:8080/xbqs/user/GetUserVideoListPage
+        String baseUrl = "http://118.123.20.133:8080/";
+
+        RetrofitManager<ApiServices> retrofitManager =
+                new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
+                        .setApiClass(ApiServices.class)
+                        //.setIsPrintLog(true)
+                        .build();
+
+        ApiServices apiServices = retrofitManager.getInstance();
+
+        VideoJsonBean jsonBean = new VideoJsonBean();
+        jsonBean.setPageindex(1);
+        jsonBean.setPageSize(10);
+        jsonBean.setUserId("5dfe7030-595f-4d67-aa56-98c8d9e43837");
+
+        Observable<ResponseBody> bodyObservable = apiServices.postJsonBean(jsonBean);
+        bodyObservable.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
+                .subscribe(new Consumer<ResponseBody>() {
+                    @Override
+                    public void accept(ResponseBody responseBody) throws Exception {
+                        String successData = "";
+                        try {
+                            successData = responseBody.string();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        mTvShowResult.setText(successData.toString());
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable t) throws Exception {
+                        mTvShowResult.setText(t.getMessage());
+                    }
+                });
+    }
+
+    /**
+     * post Json
+     * 方式2:  构建对象@Body  RequestBody 上传
+     *
+     * {@link RetrofitHelper} 可以创建常用的body
+     */
+    private void postJsonByRequestBody() {
+        // http://118.123.20.133:8080/xbqs/user/GetUserVideoListPage
+        String baseUrl = "http://118.123.20.133:8080/";
+
+        RetrofitManager<ApiServices> retrofitManager =
+                new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
+                        .setApiClass(ApiServices.class)
+                        //.setIsPrintLog(true)
+                        .build();
+
+        ApiServices apiServices = retrofitManager.getInstance();
+
+        //VideoJsonBean jsonBean = new VideoJsonBean();
+        //jsonBean.setPageindex(1);
+        //jsonBean.setPageSize(10);
+        //jsonBean.setUserId("5dfe7030-595f-4d67-aa56-98c8d9e43837");
+        Map<String, Object> stringObjectMap = new HashMap<>();
+        stringObjectMap.put("pageindex", 1);
+        stringObjectMap.put("pageSize", 10);
+        stringObjectMap.put("userId", "5dfe7030-595f-4d67-aa56-98c8d9e43837");
+        RequestBody requestBody = RetrofitHelper.getRequestBody(stringObjectMap);
+
+        Observable<ResponseBody> bodyObservable = apiServices.postJsonRequestBody(requestBody);
+        bodyObservable.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
+                .subscribe(new Consumer<ResponseBody>() {
+                    @Override
+                    public void accept(ResponseBody responseBody) throws Exception {
+                        String successData = "";
+                        try {
+                            successData = responseBody.string();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        mTvShowResult.setText(successData.toString());
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable t) throws Exception {
+                        mTvShowResult.setText(t.getMessage());
+                    }
+                });
+    }
+
+    /**
+     * 上传图片到服务器
+     *
+     * (需要读写权限)
+     */
+    private void postFile(String imagePath) {
+        File file = new File(imagePath);
+        if (!file.exists()) {
+            showToast("图片选择有误，请重新选择");
+            return;
         }
+
+        // http://118.123.20.133:8080/xbqs/user/GetUserVideoListPage
+        String baseUrl = "http://118.123.20.133:8080/";
+
+        RetrofitManager<ApiServices> retrofitManager =
+                new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
+                        .setApiClass(ApiServices.class)
+                        //.setIsPrintLog(true)
+                        .build();
+
+        ApiServices apiServices = retrofitManager.getInstance();
+
+        Map<String, File> fileMap = new HashMap<>();
+        fileMap.put("file", file);
+
+        List<MultipartBody.Part> partList = RetrofitHelper.getMultipartBodyPartList(fileMap);
+
+        Observable<ResponseBody> responseBodyObservable = apiServices.upLoadFile(partList);
+
+        responseBodyObservable.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
+                .subscribe(new Consumer<ResponseBody>() {
+                    @Override
+                    public void accept(ResponseBody responseBody) throws Exception {
+                        //主线程
+                        Log.d(TAG, "onResponse: ");
+                        String successData = null;
+                        try {
+                            successData = responseBody.string();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        mTvShowResult.setText(successData);
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable t) throws Exception {
+                        //主线程
+                        Log.d(TAG, "onFailure: " + t.getMessage().toString());
+                        mTvShowResult.setText(t.getMessage());
+                    }
+                });
     }
 
-    //上传文件
-    private void postFile() {
-        Retrofit retrofit = new Retrofit.Builder().baseUrl(
-                "http://imgup.b2b.hc360.com/imgup/turbine/action/imgup.PicManagementAction/eventsubmit_doPerform/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-
-        ApiServices apiServices = retrofit.create(ApiServices.class);
-
-        //这里将对象传入进去(需要读写权限)
-        File file = new File(
-                "/storage/emulated/0/Tencent/WeixinWork/doc/offlineRes/quill.offline/rescdn.qqmail.com/node/webdoc/images/CircleLogoBlue48.4d4d70c899.png");
-
-        RequestBody requestBody = RequestBody.create(MediaType.parse("multipart/form-data"), file);
-        MultipartBody.Part part =
-                MultipartBody.Part.createFormData("file", file.getName(), requestBody);
-
-        //参数
-        Map<String, RequestBody> parasmBody = new HashMap<>();
-        parasmBody.put("subjectID", toRequestBody("123"));
-        parasmBody.put("operType", toRequestBody("upload"));
-
-        Call<ResponseBody> call = apiServices.postFile(parasmBody, part);
-
-        call.enqueue(new Callback<ResponseBody>() {
-            @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                //主线程
-                Log.d(TAG, "onResponse: ");
-                String successData = null;
-                try {
-                    successData = response.body().string();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                mTvShowResult.setText(successData);
-            }
-
-            @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
-                //主线程
-                Log.d(TAG, "onFailure: " + t.getMessage().toString());
-                mTvShowResult.setText(t.getMessage());
-            }
-        });
-    }
-
-    //文件下载
+    /**
+     * 文件下载
+     * 注意:
+     *      1，{@link Streaming} 注解是否添加
+     *      2，统一返回的类型为{@link ResponseBody},统一处理
+     *      3, 保存在本地为耗时操作，放在子线程，下载进度回调也在子线程
+     */
     private void downLoadFile() {
-        Retrofit retrofit = new Retrofit.Builder().baseUrl(
-                "http://www.pptbz.com/pptpic/UploadFiles_6909/201203/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
+        String baseUrl = "http://www.pptbz.com/pptpic/UploadFiles_6909/201203/";
 
-        ApiServices apiServices = retrofit.create(ApiServices.class);
+        final String fileName = Environment.getExternalStorageDirectory().getAbsolutePath()
+                + File.separator
+                + "b74c3119b666237bd4af92be5.jpg";
+
+        RetrofitManager<ApiServices> retrofitManager =
+                new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
+                        .setApiClass(ApiServices.class)
+                        //.setIsPrintLog(true)
+                        .build();
+
+        ApiServices apiServices = retrofitManager.getInstance();
 
         //这需要读写权限
-        Call<ResponseBody> call = apiServices.downLoadFile();
-
-        call.enqueue(new Callback<ResponseBody>() {
+        Observable<ResponseBody> call = apiServices.downLoadFile();
+        DownLoadUtils.downLoad(call, fileName, new DownLoadImpl() {
             @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                //主线程
-                if (response.isSuccessful()) {
-                    writeFileToSDCard(response.body());
-                    Toast.makeText(getApplicationContext(), "下载成功！", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(getApplicationContext(), "下载失败！", Toast.LENGTH_SHORT).show();
-                }
-                //                mTvShowResult.setText(successData);
+            public void onProgressCallBack(final int progress) {
+                /**
+                 * 进度回调在子线程
+                 */
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mTvShowResult.setText("下载进度：" + progress);
+                    }
+                });
+
             }
 
             @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
-                //主线程
-                Log.d(TAG, "onFailure: " + t.getMessage().toString());
-                mTvShowResult.setText(t.getMessage());
+            public void onDownLoadFinish(File file) {
+                mTvShowResult.setText("下载完成,文件路径为：：" + file.getAbsolutePath());
+            }
+
+            @Override
+            public void onDownLoadFailed(String errorMsg) {
+                mTvShowResult.setText("下载失败：" + errorMsg);
             }
         });
+
+
+        //call.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
+        //        .map(new Function<ResponseBody, File>() {
+        //            @Override
+        //            public File apply(ResponseBody responseBody) throws Exception {
+        //                return new File("");
+        //            }
+        //        })
+        //        .subscribe(new Consumer<File>() {
+        //            @Override
+        //            public void accept(File file) throws Exception {
+        //
+        //            }
+        //        }, new Consumer<Throwable>() {
+        //            @Override
+        //            public void accept(Throwable throwable) throws Exception {
+        //
+        //            }
+        //        });
+
+        //call.enqueue(new Callback<ResponseBody>() {
+        //    @Override
+        //    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+        //        //主线程
+        //        if (response.isSuccessful()) {
+        //            writeFileToSDCard(response.body());
+        //            Toast.makeText(getApplicationContext(), "下载成功！", Toast.LENGTH_SHORT).show();
+        //        } else {
+        //            Toast.makeText(getApplicationContext(), "下载失败！", Toast.LENGTH_SHORT).show();
+        //        }
+        //        //                mTvShowResult.setText(successData);
+        //    }
+        //
+        //    @Override
+        //    public void onFailure(Call<ResponseBody> call, Throwable t) {
+        //        //主线程
+        //        Log.d(TAG, "onFailure: " + t.getMessage().toString());
+        //        mTvShowResult.setText(t.getMessage());
+        //    }
+        //});
     }
 
     private boolean writeFileToSDCard(ResponseBody body) {
@@ -477,7 +618,7 @@ public class MainActivity extends AppCompatActivity {
         //        ApiServices apiServices = retrofit.create(ApiServices.class);
         //
         //        //这里将对象传入进去
-        //        Call<PostJsonBean> call = apiServices.postJsonData(new PostJsonBean());
+        //        Call<PostJsonBean> call = apiServices.postJsonBean(new PostJsonBean());
         //
         //        call.enqueue(new Callback<PostJsonBean>() {
         //            @Override
@@ -505,9 +646,11 @@ public class MainActivity extends AppCompatActivity {
     @OnClick({
             R.id.btn_no_params_get, R.id.btn_no_params_path_get, R.id.btn_params_get, R.id.btn_url,
             R.id.btn_normal_post, R.id.btn_params_post, R.id.btn_json_post, R.id.btn_upload_post,
-            R.id.btn_download_post
+            R.id.btn_download_post, R.id.btn_json_post_requestbody
     })
     public void onClick(View view) {
+        Toast.makeText(getApplicationContext(), "所有都已经过测试，如果调不调可以直接替换成自己的接口进行测试", Toast.LENGTH_LONG)
+                .show();
         switch (view.getId()) {
             case R.id.btn_no_params_get:
                 noParamsGet();
@@ -522,20 +665,78 @@ public class MainActivity extends AppCompatActivity {
                 directUrl();
                 break;
             case R.id.btn_normal_post:
-                postGirl();
+                postWithOutParams();
                 break;
             case R.id.btn_params_post:
                 postParamsFootBallData();
                 break;
             case R.id.btn_json_post:
-                postJson();
+                postJsonBean();
+                break;
+            case R.id.btn_json_post_requestbody:
+                postJsonByRequestBody();
                 break;
             case R.id.btn_upload_post:
-                postFile();
+                //需要检测权限
+                RxPermissionUtils.requestPermission(this,
+                        new RxPermissionUtils.OnRxPermissionCallBack() {
+                            @Override
+                            public void onGrant() {
+                                //同意权限，打开图片选择
+                                PictureUtils.chooseImage(MainActivity.this, true);
+                            }
+
+                            @Override
+                            public void onRefuse(boolean isNeverAskAgain) {
+
+                            }
+                        }, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA);
+
                 break;
             case R.id.btn_download_post:
-                downLoadFile();
+                //需要检测权限
+                RxPermissionUtils.requestPermission(this,
+                        new RxPermissionUtils.OnRxPermissionCallBack() {
+                            @Override
+                            public void onGrant() {
+                                downLoadFile();
+                            }
+
+                            @Override
+                            public void onRefuse(boolean isNeverAskAgain) {
+
+                            }
+                        }, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA);
                 break;
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case PictureUtils.ImageRequestCode://图片选择回调
+                List<LocalMedia> selectListPic = PictureSelector.obtainMultipleResult(data);
+                if (selectListPic == null || selectListPic.size() == 0) {
+                    showToast("图片选择失败");
+                    return;
+                }
+                LocalMedia localMedia = selectListPic.get(0);
+                // 1.media.getPath(); 为原图path
+                // 2.media.getCutPath();为裁剪后path，需判断media.isCut();是否为true  注意：音视频除外
+                // 3.media.getCompressPath();为压缩后path，需判断media.isCompressed();是否为true  注意：音视频除外
+                // 如果裁剪并压缩了，以取压缩路径为准，因为是先裁剪后压缩的
+
+                imageLocalPath = selectListPic.get(0).getCompressPath();
+                NetLogUtil.d(TAG + "  选择图片本地地址为：" + imageLocalPath);
+                postFile(imageLocalPath);
+                break;
+        }
+    }
+
+    public void showToast(String s) {
+        Toast.makeText(getApplicationContext(), s, Toast.LENGTH_LONG).show();
     }
 }

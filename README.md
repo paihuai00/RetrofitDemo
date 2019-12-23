@@ -2,6 +2,36 @@
 
 [官网](https://square.github.io/retrofit/)
 
+项目使用依赖为：
+
+    // Okhttp库
+      implementation 'com.squareup.okhttp3:okhttp:3.11.0'
+      
+      // Retrofit库
+      implementation 'com.squareup.retrofit2:retrofit:2.1.0'
+      
+      implementation 'com.squareup.retrofit2:adapter-rxjava2:2.2.0'
+      
+      implementation 'com.squareup.retrofit2:converter-gson:2.3.0'//retrofit Gson 转换器
+      
+      implementation 'com.squareup.retrofit2:converter-scalars:2.3.0'//Retrofit String 转换器
+    
+      //RxJava
+      
+      implementation 'io.reactivex.rxjava2:rxjava:2.0.1'
+      
+      implementation 'io.reactivex.rxjava2:rxandroid:2.0.1'
+      
+      implementation 'com.orhanobut:logger:2.2.0'//日志打印
+      
+      //Okhttp 日志打印拦截器：https://github.com/ihsanbal/LoggingInterceptor
+      
+      implementation('com.github.ihsanbal:LoggingInterceptor:3.0.0') {
+        exclude group: 'org.json', module: 'json'
+      }
+      
+如果与自己项目冲突，可以 **exclude** 掉对应依赖
+
 ## 一、注解说明
 
 **1，常用请求方法注解**
@@ -42,9 +72,14 @@
 @Multipart		|请求发送multipart数据，需要配合使用@Part，常用于上传文件
 @Streaming		|表示响应用字节流的形式返回,如果没使用该注解，默认会把数据全部载入到内存中，该注解在在下载大文件的特别有用
 
+### 请求头
+ - **@Headers**： 用于添加固定请求头，可以同时添加多个。通过该注解添加的请求头不会相互覆盖，而是共同存在
+- **@Header**：作为方法的参数传入，用于添加不固定值的Header，该注解会更新已有的请求头
 
 
-## 二、Get请求 **@GET**
+
+### Get请求 **@GET**
+
 
 **1，无参Get**
 
@@ -73,10 +108,26 @@
 ```
 上面伪代码的完整请求为：`https://urlxxxxxxx?page=xxxx` ， `@QueryMap` 就是使用map将参数组装
 
+3，文件下载@Get
+
+注意：文件下载一般会保存在本地，所以返回值使用`ResponseBody`来进行统一处理
+
+伪代码：
+在下载大文件的时候，注意添加`@Streaming`
+
+```
+    /**
+     * 文件下载
+     *
+     * 大文件的时候，要加：@Streaming 不然会报OOM
+     */
+    @Streaming
+    @GET("2012031220134655.jpg")
+    Observable<ResponseBody> downLoadFile();
+```
 
 
-
-## 三、Post请求 **@Post**
+### Post请求 **@Post**
 1，post上传**json字符串**，需要使用 `@Body` 有两种方式
 
 - 使用bean对象
@@ -120,7 +171,7 @@ RequestBody requestBody = RequestBody.create(MediaType.parse("application/json;c
 Call<ResponseBody> login(@Field("xxx") String xxx, @Field("xx") String xx);
 ```
 
-3.1，Post 上传文件，需要使用到  `@Part`、`@PartMap`、`@Multipart`
+3，Post 上传文件，需要使用到  `@Part`、`@PartMap`、`@Multipart`
 
 - 单文件上传
 
@@ -147,19 +198,37 @@ MultipartBody.Part part = MultipartBody.Part.createFormData("file", f.getName(),
 @POST("xxxx")
 Call<ResponseBody> upLoadFiles(@Part List<MultipartBody.Part> parts);
 ```
-3.2，上面Post上传文件一直使用的是`@Part`和`@Multipart`注解，可以使用 `@Body`和`MultipartBody`替代
 
-伪代码如下：
+
+## 二、使用说明
+
+#### 1、初始化
+建议在 `Application`中，进行Retrofit的初始化，得到唯一全局的 `ApiServices`。
+
+常规的值(超时、log打印等)都有默认配置，可以在 **NetBuilder** 中进行自己的配置，注意必须设置自己的Retrofit interface类，代码如下：
 ```
-@POST("Upload")
-Call<ResponseBody> upload(@Body MultipartBody multipartBody);
+RetrofitManager<ApiServices> retrofitManager =
+                new RetrofitManager.NetBuilder(this)
+                        .setBaseUrl(baseUrl)//设置BaseUrl
+                        .setApiClass(ApiServices.class)//设置自己的类型，必须设置！！！
+                        //.setIsPrintLog(true)
+                        .build();
+
+ApiServices apiServices = retrofitManager.getInstance();
 ```
 
-所以，有2种方式上传文件
-- `@Multipart`注解方法，并用`@Part`注解方法参数，类型是`MultipartBody.Part`
-- 用`@Body`注解方法参数，类型是`MultipartBody`
+#### 2、使用
 
+2.1，常用类
 
-## 四、请求头
- - **@Headers**： 用于添加固定请求头，可以同时添加多个。通过该注解添加的请求头不会相互覆盖，而是共同存在
-- **@Header**：作为方法的参数传入，用于添加不固定值的Header，该注解会更新已有的请求头
+    Retrofit管理类： RetrofitManager
+    
+    配置：RetrofitController
+    
+    帮助类(用于生成不同请求的body): RetrofitHelper
+    
+    下载：DownLoadUtils
+
+2.2，具体各个get、post、上传、下载方法的调用，见demo，已经添加相关注释。
+
+注：项目demo中的例子都已经测试通过，如果调用不通请换成自己的接口(接口网上找的说不定啥时候就GG了)

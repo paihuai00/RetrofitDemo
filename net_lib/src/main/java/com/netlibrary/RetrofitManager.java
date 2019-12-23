@@ -8,7 +8,9 @@ import com.franmontiel.persistentcookiejar.cache.SetCookieCache;
 import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor;
 import com.ihsanbal.logging.Level;
 import com.ihsanbal.logging.LoggingInterceptor;
+import com.netlibrary.net_utils.DownLoadUtils;
 import com.netlibrary.net_utils.HttpSslUtils;
+import com.netlibrary.net_utils.RetrofitHelper;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 import okhttp3.Cache;
@@ -26,6 +28,8 @@ import retrofit2.converter.gson.GsonConverterFactory;
  * description:  Retrofit 管理
  *
  * 变量参数{@link RetrofitController}
+ * 帮助类：{@link RetrofitHelper} , 用于生成不同请求的body
+ * 网络下载：{@link DownLoadUtils}
  */
 public class RetrofitManager<T> {
     private OkHttpClient okHttpClient;
@@ -126,6 +130,10 @@ public class RetrofitManager<T> {
     public T getInstance() {
         if (TextUtils.isEmpty(baseUrl)) {
             throw new IllegalArgumentException("RetrofitManager ： Please set BaseUrl！");
+        }
+
+        if (apiClass == null) {
+            throw new IllegalArgumentException("RetrofitManager ： Please setApiClass()！");
         }
 
         initOkhttpClient();
