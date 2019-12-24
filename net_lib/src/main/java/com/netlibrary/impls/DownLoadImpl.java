@@ -1,7 +1,4 @@
 package com.netlibrary.impls;
-
-import android.annotation.UiThread;
-
 import java.io.File;
 
 /**
