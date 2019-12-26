@@ -54,7 +54,25 @@ import retrofit2.http.Path;
 import retrofit2.http.Query;
 import retrofit2.http.Streaming;
 import retrofit2.http.Url;
-
+/**
+ * 1,Get - 无参              {@link MainActivity#noParamsGet()}
+ *
+ * 2,Get - Url动态变化       {@link MainActivity#noParamsPathGet()}
+ *
+ * 3,Get - 有参              {@link MainActivity#paramsGet()}
+ *
+ * 4,直接传入Url             {@link MainActivity#directUrl()}
+ *
+ * 5,Post - 不带参数          {@link MainActivity#postWithOutParams()}
+ *
+ * 6,Post - 带参数           {@link MainActivity#postParamsFootBallData()}
+ *
+ * 7,Post - 上传json          {@link MainActivity#postJsonBean()}
+ *        - 上传json          {@link MainActivity#postJsonByRequestBody()}
+ *
+ * 8,Post - 上传file          {@link MainActivity#postFile(String)}
+ *
+ */
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
 
