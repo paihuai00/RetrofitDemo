@@ -19,6 +19,7 @@ import com.csx.retrofitdemo.utils.RxPermissionUtils;
 import com.luck.picture.lib.PictureSelector;
 import com.luck.picture.lib.entity.LocalMedia;
 import com.netlibrary.NetLogUtil;
+import com.netlibrary.RetrofitController;
 import com.netlibrary.RetrofitManager;
 import com.netlibrary.impls.DownLoadImpl;
 import com.netlibrary.net_utils.DownLoadUtils;
@@ -71,6 +72,12 @@ import retrofit2.http.Url;
  *        - 上传json          {@link MainActivity#postJsonByRequestBody()}
  *
  * 8,Post - 上传file          {@link MainActivity#postFile(String)}
+ *
+ * 9,常用类
+ *   - {@link RetrofitManager},Retrofit 管理类
+ *   - {@link RetrofitHelper}，用于生成 RequestBody、MultipartBody
+ *   - {@link RetrofitController} , 配置类，包含常用的 MediaType，以及RetrofitManager参数
+ *   - {@link DownLoadUtils}      ,下载utils
  *
  */
 public class MainActivity extends AppCompatActivity {
