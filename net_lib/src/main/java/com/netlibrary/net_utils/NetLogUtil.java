@@ -1,4 +1,4 @@
-package com.netlibrary;
+package com.netlibrary.net_utils;
 
 import android.support.annotation.Nullable;
 import com.orhanobut.logger.AndroidLogAdapter;

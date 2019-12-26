@@ -1,6 +1,8 @@
-package com.netlibrary;
+package com.netlibrary.interceptors;
 
 
+import com.netlibrary.net_utils.JsonUtil;
+import com.netlibrary.net_utils.NetLogUtil;
 import okhttp3.logging.HttpLoggingInterceptor;
 
 /**

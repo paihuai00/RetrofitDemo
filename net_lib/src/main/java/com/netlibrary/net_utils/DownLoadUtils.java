@@ -1,9 +1,6 @@
 package com.netlibrary.net_utils;
 
 import android.support.annotation.WorkerThread;
-import android.util.Log;
-import android.webkit.DownloadListener;
-import com.netlibrary.NetLogUtil;
 import com.netlibrary.impls.DownLoadImpl;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -19,7 +16,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import okhttp3.ResponseBody;
-import retrofit2.Response;
 
 /**
  * Date: 2019/12/23

@@ -1,4 +1,4 @@
-package com.netlibrary;
+package com.netlibrary.net_utils;
 
 /**
  * create by cuishuxiang
