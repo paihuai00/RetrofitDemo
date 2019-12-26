@@ -206,7 +206,7 @@ public class RetrofitManager<T> {
                     builder.addInterceptor(i);
                 }
             }
-
+            //持久化 Cookie
             if (isNeedPersistentCookie) {
                 PersistentCookieJar cookieJar=new PersistentCookieJar(new SetCookieCache(), new SharedPrefsCookiePersistor(context));
                 builder.cookieJar(cookieJar);

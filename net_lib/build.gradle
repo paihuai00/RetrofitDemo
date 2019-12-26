@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 //上传依赖配置
-apply plugin: 'com.github.dcendents.android-maven'
-group='com.github.paihuai00'
+//apply plugin: 'com.github.dcendents.android-maven'
+//group='com.github.paihuai00'
 android {
   compileSdkVersion 28
 
@@ -47,7 +47,7 @@ dependencies {
   implementation 'com.orhanobut:logger:2.2.0'
   //日志打印
   //Okhttp 日志打印拦截器：https://github.com/ihsanbal/LoggingInterceptor
-  implementation('com.github.ihsanbal:LoggingInterceptor:3.0.0') {
+  implementation ('com.github.ihsanbal:LoggingInterceptor:3.0.0') {
     exclude group: 'org.json', module: 'json'
   }
   //持久化Cookie:https://github.com/franmontiel/PersistentCookieJar
