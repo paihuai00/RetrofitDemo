@@ -101,6 +101,11 @@ public class MainActivity extends AppCompatActivity {
                 mTvShowResult.setText("");
             }
         });
+
+        File file = new File(getCacheDir(), "image");
+        file.isFile();
+        File realFile = new File(file, "hhh.jpg");
+        System.out.println("");
     }
 
     /**
@@ -569,23 +574,24 @@ public class MainActivity extends AppCompatActivity {
         //});
     }
 
+    /**
+     * 断点续传
+     */
     private void downLoadApkFile() {
 
         if (!RxPermissionUtils.isAgreeInstallPackage(this)) {
             RxPermissionUtils.openInstallSetting(this);
             return;
         }
-
-
-        //https://xbqs.ai-zhizhong.com/attachment/file/xbqs.apk
-        String apkUrl = "https://xbqs.ai-zhizhong.com/attachment/file/xbqs.apk";
+        //http://dldir1.qq.com/qqmi/aphone_p2p/TencentVideo_V6.0.0.14297_848.apk
+        String apkUrl = "http://dldir1.qq.com/qqmi/aphone_p2p/TencentVideo_V6.0.0.14297_848.apk";
 
         final String fileDir = Environment.getExternalStorageDirectory() +File.separator+"down_apk";
-        final String fileName ="xbqs.apk";
+        final String fileName ="tencentvideo.apk";
 
         RetrofitManager<ApiServices> retrofitManager =
-                new RetrofitManager.NetBuilder(this).setBaseUrl(
-                        "https://xbqs.ai-zhizhong.com/")//这里使用 @Url 注解，可以不设置base
+                new RetrofitManager.NetBuilder(this)
+                        .setBaseUrl("https://xbqs.ai-zhizhong.com/")//这里使用 @Url 注解，可以不设置base
                         .setApiClass(ApiServices.class)
                         //.setIsPrintLog(true)
                         .build();
