@@ -30,12 +30,6 @@ public class DownLoadUtils {
     private static CompositeDisposable mCompositeDisposable;
 
     /**
-     *
-     * @param observable
-     * @param completeFileName
-     * @param downLoad 下载回调
-     */
-    /**
      * 下载方法
      * @param observable  由于下载文件，文件可能过大，将保存到sd卡操作放到 子线程；所以进度回调也在子线程
      * @param fileDri    文件包
