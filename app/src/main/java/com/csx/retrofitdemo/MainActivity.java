@@ -489,9 +489,9 @@ public class MainActivity extends AppCompatActivity {
     private void downLoadFile() {
         String baseUrl = "http://www.pptbz.com/pptpic/UploadFiles_6909/201203/";
 
-        final String fileName = Environment.getExternalStorageDirectory().getAbsolutePath()
-                + File.separator
-                + "b74c3119b666237bd4af92be5.jpg";
+        String fileDir = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator;
+
+        final String fileName = "b74c3119b666237bd4af92be5.jpg";
 
         RetrofitManager<ApiServices> retrofitManager =
                 new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
@@ -503,7 +503,7 @@ public class MainActivity extends AppCompatActivity {
 
         //这需要读写权限
         Observable<ResponseBody> call = apiServices.downLoadFile();
-        DownLoadUtils.downLoad(call, fileName, new DownLoadImpl() {
+        DownLoadUtils.downLoad(call, fileDir,fileName, new DownLoadImpl() {
             @Override
             public void onProgressCallBack(final int progress) {
                 /**
@@ -580,7 +580,8 @@ public class MainActivity extends AppCompatActivity {
         //https://xbqs.ai-zhizhong.com/attachment/file/xbqs.apk
         String apkUrl = "https://xbqs.ai-zhizhong.com/attachment/file/xbqs.apk";
 
-        final String fileName = Environment.getExternalStorageDirectory() +File.separator+"down_apk"+File.separator + "xbqs.apk";
+        final String fileDir = Environment.getExternalStorageDirectory() +File.separator+"down_apk";
+        final String fileName ="xbqs.apk";
 
         RetrofitManager<ApiServices> retrofitManager =
                 new RetrofitManager.NetBuilder(this).setBaseUrl(
@@ -593,7 +594,7 @@ public class MainActivity extends AppCompatActivity {
 
         //这需要读写权限
         Observable<ResponseBody> call = apiServices.downLoadApkFile(apkUrl);
-        DownLoadUtils.downLoad(call, fileName, new DownLoadImpl() {
+        DownLoadUtils.downLoad(call, fileDir, fileName, new DownLoadImpl() {
             @Override
             public void onProgressCallBack(final int progress) {
                 /**
@@ -612,7 +613,7 @@ public class MainActivity extends AppCompatActivity {
                 mTvShowResult.setText("下载完成,文件路径为：：" + file.getAbsolutePath());
                 System.out.println("下载成功");
                 // 跳转到系统安装页面
-                InstallApkUtils.installApk(MainActivity.this,file);
+                InstallApkUtils.installApk(MainActivity.this, file);
             }
 
             @Override

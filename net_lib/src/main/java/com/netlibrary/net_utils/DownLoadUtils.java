@@ -30,19 +30,27 @@ public class DownLoadUtils {
     private static CompositeDisposable mCompositeDisposable;
 
     /**
-     * 下载方法
-     * @param observable 由于下载文件，文件可能过大，将保存到sd卡操作放到 子线程；所以进度回调也在子线程
+     *
+     * @param observable
      * @param completeFileName
      * @param downLoad 下载回调
      */
-    public static Disposable downLoad(Observable<ResponseBody> observable, final String completeFileName,
+    /**
+     * 下载方法
+     * @param observable  由于下载文件，文件可能过大，将保存到sd卡操作放到 子线程；所以进度回调也在子线程
+     * @param fileDri    文件包
+     * @param fileName  文件名
+     * @param downLoad 下载回调
+     * @return
+     */
+    public static Disposable downLoad(Observable<ResponseBody> observable, final String fileDri, final String fileName,
             final DownLoadImpl downLoad) {
         Disposable disposable =
                 observable.subscribeOn(Schedulers.io()).map(new Function<ResponseBody, File>() {
                     @Override
                     public File apply(ResponseBody responseBody) throws Exception {
                         //System.out.println("aaa apply  Thread.currentThread().getName() = " + Thread.currentThread().getName());
-                        return writeFile2Disk(responseBody, completeFileName, downLoad);
+                        return writeFile2Disk(responseBody, fileDri,fileName, downLoad);
                     }
                 }).observeOn(AndroidSchedulers.mainThread()).subscribe(new Consumer<File>() {
                     @Override
@@ -54,7 +62,7 @@ public class DownLoadUtils {
                     @Override
                     public void accept(Throwable throwable) throws Exception {
                         downLoad.onDownLoadFailed(throwable.getMessage());
-                        NetLogUtil.d(TAG +"文件： "+completeFileName+ " 下载文件失败 ：throwable.getMessage() =  " + throwable.getMessage());
+                        NetLogUtil.d(TAG +"文件： "+fileName+ " 下载文件失败 ：throwable.getMessage() =  " + throwable.getMessage());
                     }
                 });
 
@@ -73,11 +81,16 @@ public class DownLoadUtils {
     }
 
     @WorkerThread
-    private static File writeFile2Disk(ResponseBody responseBody, String fileName,
+    private static File writeFile2Disk(ResponseBody responseBody,String fileDir, String fileName,
             DownLoadImpl downloadListener) {
-        //创建一个 File
-        File file = new File(fileName);
-        if (file.exists()) file.delete();// 如果文件存在，直接删除
+        //先创建，文件夹
+        File dirFile = new File(fileDir);
+        if (!dirFile.exists())dirFile.mkdirs();
+        //创建 File
+        File file = new File(dirFile, fileName);
+        if (file.exists()){
+            file.delete();// 如果文件存在，直接删除
+        }
 
         long currentLength = 0;
         OutputStream os = null;
@@ -99,7 +112,7 @@ public class DownLoadUtils {
                 currentLength += len;
                 //NetLogUtil.d(TAG + "当前进度: " + currentLength);
                 int tempProgress = (int) (100 * currentLength / totalLength);
-                System.out.println(" bbbbb: " + tempProgress);
+                //System.out.println(" bbbbb: " + tempProgress);
                 downloadListener.onProgressCallBack(tempProgress);
                 if (tempProgress == 100) {
                     //在外面回调回去
