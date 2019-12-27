@@ -1,6 +1,10 @@
 package com.csx.retrofitdemo.utils;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+import android.provider.Settings;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 
@@ -18,6 +22,8 @@ import io.reactivex.functions.Consumer;
  */
 public class RxPermissionUtils {
     private static final String TAG = "RxPermissionUtils";
+
+    public static final int SetInstallRequestCode = 0x555;
 
     /**
      * 请求权限,内部有检测权限是否同意
@@ -38,7 +44,12 @@ public class RxPermissionUtils {
 
         if (activityOrFragment instanceof Activity) {
             RxPermissions rxPermissions1 = new RxPermissions((FragmentActivity) activityOrFragment);
-            rxPermissions1.requestEach(permissions).subscribe(new Consumer<Permission>() {
+            /**
+             * requestEachCombined: 该方法会在所有的权限都同意后，只回调一次
+             *
+             * requestEach: 每个权限都会回调
+             * */
+            rxPermissions1.requestEachCombined(permissions).subscribe(new Consumer<Permission>() {
                 @Override
                 public void accept(Permission permission) throws Exception {
                     if (permission.granted) {
@@ -60,7 +71,12 @@ public class RxPermissionUtils {
 
         } else if (activityOrFragment instanceof Fragment) {
             RxPermissions rxPermissions = new RxPermissions((Fragment) activityOrFragment);
-            rxPermissions.requestEach(permissions).subscribe(new Consumer<Permission>() {
+            /**
+             * requestEachCombined: 该方法会在所有的权限都同意后，只回调一次
+             *
+             * requestEach: 每个权限都会回调
+             * */
+            rxPermissions.requestEachCombined(permissions).subscribe(new Consumer<Permission>() {
                 @Override
                 public void accept(Permission permission) throws Exception {
                     if (permission.granted) {
@@ -81,6 +97,34 @@ public class RxPermissionUtils {
             });
 
         }
+    }
+
+    /**
+     * 是否允许 安装app
+     * @param context
+     * @return
+     *
+     *  注意需要声明该权限
+     *   <!--8.0 安装权限-->
+     *   <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+     */
+    public static boolean isAgreeInstallPackage(Context context) {
+        boolean isAgree = true;
+        //8.0以上 需要判断
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            isAgree = context.getPackageManager().canRequestPackageInstalls();
+        }
+
+        return isAgree;
+    }
+
+    /**
+     * 前往设置，开启 安装apk权限
+     * @param context
+     */
+    public static void openInstallSetting(Activity context) {
+        Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+        context.startActivityForResult(intent,SetInstallRequestCode);
     }
 
     public interface OnRxPermissionCallBack {

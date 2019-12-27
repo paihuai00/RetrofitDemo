@@ -2,6 +2,7 @@ package com.csx.retrofitdemo;
 
 import android.Manifest;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.Nullable;
@@ -13,6 +14,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.csx.retrofitdemo.beans.VideoJsonBean;
+import com.csx.retrofitdemo.utils.InstallApkUtils;
 import com.csx.retrofitdemo.utils.PictureUtils;
 import com.csx.retrofitdemo.utils.RxPermissionUtils;
 import com.luck.picture.lib.PictureSelector;
@@ -24,6 +26,7 @@ import com.netlibrary.impls.DownLoadImpl;
 import com.netlibrary.net_utils.DownLoadUtils;
 import com.netlibrary.net_utils.RetrofitHelper;
 import com.netlibrary.net_utils.SchedulersHelper;
+import com.tbruyelle.rxpermissions2.RxPermissions;
 import io.reactivex.Observable;
 import io.reactivex.functions.Consumer;
 import java.io.File;
@@ -46,6 +49,7 @@ import retrofit2.http.Path;
 import retrofit2.http.Query;
 import retrofit2.http.Streaming;
 import retrofit2.http.Url;
+
 /**
  * 1,Get - 无参              {@link MainActivity#noParamsGet()}
  *
@@ -60,16 +64,15 @@ import retrofit2.http.Url;
  * 6,Post - 带参数           {@link MainActivity#postParamsFootBallData()}
  *
  * 7,Post - 上传json          {@link MainActivity#postJsonBean()}
- *        - 上传json          {@link MainActivity#postJsonByRequestBody()}
+ * - 上传json          {@link MainActivity#postJsonByRequestBody()}
  *
  * 8,Post - 上传file          {@link MainActivity#postFile(String)}
  *
  * 9,常用类
- *   - {@link RetrofitManager},Retrofit 管理类
- *   - {@link RetrofitHelper}，用于生成 RequestBody、MultipartBody
- *   - {@link RetrofitController} , 配置类，包含常用的 MediaType，以及RetrofitManager参数
- *   - {@link DownLoadUtils}      ,下载utils
- *
+ * - {@link RetrofitManager},Retrofit 管理类
+ * - {@link RetrofitHelper}，用于生成 RequestBody、MultipartBody
+ * - {@link RetrofitController} , 配置类，包含常用的 MediaType，以及RetrofitManager参数
+ * - {@link DownLoadUtils}      ,下载utils
  */
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -479,9 +482,9 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 文件下载
      * 注意:
-     *      1，{@link Streaming} 注解是否添加
-     *      2，统一返回的类型为{@link ResponseBody},统一处理
-     *      3, 保存在本地为耗时操作，放在子线程，下载进度回调也在子线程
+     * 1，{@link Streaming} 注解是否添加
+     * 2，统一返回的类型为{@link ResponseBody},统一处理
+     * 3, 保存在本地为耗时操作，放在子线程，下载进度回调也在子线程
      */
     private void downLoadFile() {
         String baseUrl = "http://www.pptbz.com/pptpic/UploadFiles_6909/201203/";
@@ -512,7 +515,6 @@ public class MainActivity extends AppCompatActivity {
                         mTvShowResult.setText("下载进度：" + progress);
                     }
                 });
-
             }
 
             @Override
@@ -525,7 +527,6 @@ public class MainActivity extends AppCompatActivity {
                 mTvShowResult.setText("下载失败：" + errorMsg);
             }
         });
-
 
         //call.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
         //        .map(new Function<ResponseBody, File>() {
@@ -566,6 +567,59 @@ public class MainActivity extends AppCompatActivity {
         //        mTvShowResult.setText(t.getMessage());
         //    }
         //});
+    }
+
+    private void downLoadApkFile() {
+
+        if (!RxPermissionUtils.isAgreeInstallPackage(this)) {
+            RxPermissionUtils.openInstallSetting(this);
+            return;
+        }
+
+
+        //https://xbqs.ai-zhizhong.com/attachment/file/xbqs.apk
+        String apkUrl = "https://xbqs.ai-zhizhong.com/attachment/file/xbqs.apk";
+
+        final String fileName = Environment.getExternalStorageDirectory() +File.separator+"down_apk"+File.separator + "xbqs.apk";
+
+        RetrofitManager<ApiServices> retrofitManager =
+                new RetrofitManager.NetBuilder(this).setBaseUrl(
+                        "https://xbqs.ai-zhizhong.com/")//这里使用 @Url 注解，可以不设置base
+                        .setApiClass(ApiServices.class)
+                        //.setIsPrintLog(true)
+                        .build();
+
+        ApiServices apiServices = retrofitManager.getInstance();
+
+        //这需要读写权限
+        Observable<ResponseBody> call = apiServices.downLoadApkFile(apkUrl);
+        DownLoadUtils.downLoad(call, fileName, new DownLoadImpl() {
+            @Override
+            public void onProgressCallBack(final int progress) {
+                /**
+                 * 进度回调在子线程
+                 */
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mTvShowResult.setText("下载进度：" + progress);
+                    }
+                });
+            }
+
+            @Override
+            public void onDownLoadFinish(File file) {
+                mTvShowResult.setText("下载完成,文件路径为：：" + file.getAbsolutePath());
+                System.out.println("下载成功");
+                // 跳转到系统安装页面
+                InstallApkUtils.installApk(MainActivity.this,file);
+            }
+
+            @Override
+            public void onDownLoadFailed(String errorMsg) {
+                mTvShowResult.setText("下载失败：" + errorMsg);
+            }
+        });
     }
 
     private boolean writeFileToSDCard(ResponseBody body) {
@@ -662,7 +716,7 @@ public class MainActivity extends AppCompatActivity {
     @OnClick({
             R.id.btn_no_params_get, R.id.btn_no_params_path_get, R.id.btn_params_get, R.id.btn_url,
             R.id.btn_normal_post, R.id.btn_params_post, R.id.btn_json_post, R.id.btn_upload_post,
-            R.id.btn_download_post, R.id.btn_json_post_requestbody
+            R.id.btn_download_post, R.id.btn_json_post_requestbody, R.id.btn_download_apk
     })
     public void onClick(View view) {
         Toast.makeText(getApplicationContext(), "所有都已经过测试，如果调不调可以直接替换成自己的接口进行测试", Toast.LENGTH_LONG)
@@ -726,6 +780,23 @@ public class MainActivity extends AppCompatActivity {
                         }, Manifest.permission.WRITE_EXTERNAL_STORAGE,
                         Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA);
                 break;
+
+            case R.id.btn_download_apk:
+                //需要检测权限
+                RxPermissionUtils.requestPermission(this,
+                        new RxPermissionUtils.OnRxPermissionCallBack() {
+                            @Override
+                            public void onGrant() {
+                                downLoadApkFile();
+                            }
+
+                            @Override
+                            public void onRefuse(boolean isNeverAskAgain) {
+
+                            }
+                        }, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA);
+                break;
         }
     }
 
@@ -749,10 +820,21 @@ public class MainActivity extends AppCompatActivity {
                 NetLogUtil.d(TAG + "  选择图片本地地址为：" + imageLocalPath);
                 postFile(imageLocalPath);
                 break;
+            case RxPermissionUtils.SetInstallRequestCode:
+                boolean isAgreeInstallApk=RxPermissionUtils.isAgreeInstallPackage(MainActivity.this);
+                Log.d(TAG , "  onActivityResult 是否允许安装apk isAgreeInstallApk = "+isAgreeInstallApk);
+                if (!isAgreeInstallApk) {
+                    showToast("请开启改权限，安装最新的应用！");
+                } else {
+                    downLoadApkFile();
+                }
+                break;
         }
     }
 
     public void showToast(String s) {
         Toast.makeText(getApplicationContext(), s, Toast.LENGTH_LONG).show();
     }
+
+
 }

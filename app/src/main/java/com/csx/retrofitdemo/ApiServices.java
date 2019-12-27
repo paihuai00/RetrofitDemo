@@ -64,7 +64,9 @@ public interface ApiServices {
     @GET("2012031220134655.jpg")
     Observable<ResponseBody> downLoadFile();
 
-
+    @Streaming
+    @GET("")
+    Observable<ResponseBody> downLoadApkFile(@Url String apkUrl);
     //=============   POST   =========================
 
     @POST("/hotkey/json")

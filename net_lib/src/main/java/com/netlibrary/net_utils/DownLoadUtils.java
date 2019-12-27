@@ -83,6 +83,7 @@ public class DownLoadUtils {
         OutputStream os = null;
 
         if (responseBody == null) {
+            NetLogUtil.d(TAG + " 文件下载： writeFile2Disk # responseBody == null，资源错误 ");
             downloadListener.onDownLoadFailed("资源错误！");
             return file;
         }
@@ -96,10 +97,13 @@ public class DownLoadUtils {
             while ((len = is.read(buff)) != -1) {
                 os.write(buff, 0, len);
                 currentLength += len;
-                NetLogUtil.d(TAG + "当前进度: " + currentLength);
-                downloadListener.onProgressCallBack((int) (100 * currentLength / totalLength));
-                if ((int) (100 * currentLength / totalLength) == 100) {
-                    downloadListener.onDownLoadFinish(file);
+                //NetLogUtil.d(TAG + "当前进度: " + currentLength);
+                int tempProgress = (int) (100 * currentLength / totalLength);
+                System.out.println(" bbbbb: " + tempProgress);
+                downloadListener.onProgressCallBack(tempProgress);
+                if (tempProgress == 100) {
+                    //在外面回调回去
+                    //downloadListener.onDownLoadFinish(file);
                 }
             }
         } catch (FileNotFoundException e) {

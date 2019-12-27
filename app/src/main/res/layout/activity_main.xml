@@ -93,7 +93,14 @@
             android:id="@+id/btn_download_post"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Post文件下载"
+            android:text="文件下载"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btn_download_apk"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Apk文件下载"
             android:textAllCaps="false" />
 
         <TextView
