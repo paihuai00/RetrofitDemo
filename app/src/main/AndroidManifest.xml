@@ -31,10 +31,10 @@
     </activity>
 
 
-    <!--这里的"com.retrofitdemo"是我项目的包名，替换成自己的即可-->
+    <!--${applicationId} 是项目包名-->
     <provider
         android:name="android.support.v4.content.FileProvider"
-        android:authorities="com.retrofitdemo.fileprovider"
+        android:authorities="${applicationId}.fileprovider"
         android:exported="false"
         android:grantUriPermissions="true">
       <meta-data
