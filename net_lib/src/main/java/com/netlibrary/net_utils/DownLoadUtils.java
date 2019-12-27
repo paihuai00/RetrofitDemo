@@ -35,7 +35,7 @@ public class DownLoadUtils {
      * @param completeFileName
      * @param downLoad 下载回调
      */
-    public static void downLoad(Observable<ResponseBody> observable, final String completeFileName,
+    public static Disposable downLoad(Observable<ResponseBody> observable, final String completeFileName,
             final DownLoadImpl downLoad) {
         Disposable disposable =
                 observable.subscribeOn(Schedulers.io()).map(new Function<ResponseBody, File>() {
@@ -61,6 +61,8 @@ public class DownLoadUtils {
         if (mCompositeDisposable==null) mCompositeDisposable = new CompositeDisposable();
 
         mCompositeDisposable.add(disposable);
+
+        return disposable;
     }
 
     public static void clearDisposable() {
@@ -90,7 +92,7 @@ public class DownLoadUtils {
         try {
             os = new FileOutputStream(file);
             int len;
-            byte[] buff = new byte[1024];
+            byte[] buff = new byte[2 * 1024];
             while ((len = is.read(buff)) != -1) {
                 os.write(buff, 0, len);
                 currentLength += len;
