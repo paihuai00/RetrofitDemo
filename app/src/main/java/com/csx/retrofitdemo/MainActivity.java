@@ -579,10 +579,10 @@ public class MainActivity extends AppCompatActivity {
      */
     private void downLoadApkFile() {
 
-        if (!RxPermissionUtils.isAgreeInstallPackage(this)) {
-            RxPermissionUtils.openInstallSetting(this);
-            return;
-        }
+        //if (!RxPermissionUtils.isAgreeInstallPackage(this)) {
+        //    RxPermissionUtils.openInstallSetting(this);
+        //    return;
+        //}
         //http://dldir1.qq.com/qqmi/aphone_p2p/TencentVideo_V6.0.0.14297_848.apk
         String apkUrl = "http://dldir1.qq.com/qqmi/aphone_p2p/TencentVideo_V6.0.0.14297_848.apk";
 
