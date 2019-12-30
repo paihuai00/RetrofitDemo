@@ -300,7 +300,13 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    //post 带参数
+
+    /**
+     * post 带参数,请求
+     * 表单上传使用：@FormUrlEncoded + @Field
+     *
+     * 非表单上传直接使用：@Query
+     */
     private void postParamsFootBallData() {
         String baseUrl = "http://op.juhe.cn/onebox/";
 
