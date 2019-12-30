@@ -11,6 +11,7 @@ import com.netlibrary.net_utils.DownLoadUtils;
 import com.netlibrary.net_utils.HttpSslUtils;
 import com.netlibrary.net_utils.NetLogUtil;
 import com.netlibrary.net_utils.RetrofitHelper;
+import com.netlibrary.net_utils.SPUtils;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 import okhttp3.Cache;
@@ -55,6 +56,9 @@ public class RetrofitManager<T> {
         fileCache = new File(context.getCacheDir(), "net_cache");
 
         NetLogUtil.init(isShowLog, isShowLog);
+
+        //初始化 sp，断点下载功能
+        SPUtils.initialize(context, "retrofit_net_sp");
     }
 
     /*设置重连时间*/

@@ -100,7 +100,7 @@
             android:id="@+id/btn_download_apk"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Apk文件下载"
+            android:text="Apk文件下载(断点续传)"
             android:textAllCaps="false" />
 
         <TextView

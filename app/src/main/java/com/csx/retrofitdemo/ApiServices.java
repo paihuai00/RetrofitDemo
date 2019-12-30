@@ -1,6 +1,7 @@
 package com.csx.retrofitdemo;
 
 import com.csx.retrofitdemo.beans.VideoJsonBean;
+import com.netlibrary.net_utils.DownLoadUtils;
 import io.reactivex.Observable;
 import java.util.List;
 import java.util.Map;
@@ -64,9 +65,15 @@ public interface ApiServices {
     @GET("2012031220134655.jpg")
     Observable<ResponseBody> downLoadFile();
 
+    /**
+     * 断点下载 文件，Range：https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Range
+     *
+     * @param range : {@link DownLoadUtils#getUrlRange(String, String, String)}
+     * @return
+     */
     @Streaming
     @GET("")
-    Observable<ResponseBody> downLoadApkFile(@Url String apkUrl);
+    Observable<ResponseBody> downLoadApkFile(@Header("Range") String range,@Url String apkUrl);
     //=============   POST   =========================
 
     @POST("/hotkey/json")
@@ -112,6 +119,8 @@ public interface ApiServices {
     @Multipart
     @POST("xbqs/Attachment/UploadAttach")
     Observable<ResponseBody> upLoadFile(@Part List<MultipartBody.Part> parts);
+
+
 
 
     @Headers("Cache-Control: max-age=640000")//静态添加单个header

@@ -25,6 +25,7 @@ import com.netlibrary.RetrofitManager;
 import com.netlibrary.impls.DownLoadImpl;
 import com.netlibrary.net_utils.DownLoadUtils;
 import com.netlibrary.net_utils.RetrofitHelper;
+import com.netlibrary.net_utils.SPUtils;
 import com.netlibrary.net_utils.SchedulersHelper;
 import com.tbruyelle.rxpermissions2.RxPermissions;
 import io.reactivex.Observable;
@@ -68,6 +69,9 @@ import retrofit2.http.Url;
  *
  * 8,Post - 上传file          {@link MainActivity#postFile(String)}
  *
+ * 9，文件下载                 {@link MainActivity#downLoadFile()}
+ *                    断点续传 {@link MainActivity#downLoadApkFile()}
+ *
  * 9,常用类
  * - {@link RetrofitManager},Retrofit 管理类
  * - {@link RetrofitHelper}，用于生成 RequestBody、MultipartBody
@@ -101,11 +105,6 @@ public class MainActivity extends AppCompatActivity {
                 mTvShowResult.setText("");
             }
         });
-
-        File file = new File(getCacheDir(), "image");
-        file.isFile();
-        File realFile = new File(file, "hhh.jpg");
-        System.out.println("");
     }
 
     /**
@@ -581,14 +580,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 断点续传
+     * 通过 http range 实现 断点续传下载
      */
     private void downLoadApkFile() {
-
-        //if (!RxPermissionUtils.isAgreeInstallPackage(this)) {
-        //    RxPermissionUtils.openInstallSetting(this);
-        //    return;
-        //}
         //http://dldir1.qq.com/qqmi/aphone_p2p/TencentVideo_V6.0.0.14297_848.apk
         String apkUrl = "http://dldir1.qq.com/qqmi/aphone_p2p/TencentVideo_V6.0.0.14297_848.apk";
 
@@ -597,7 +591,7 @@ public class MainActivity extends AppCompatActivity {
 
         RetrofitManager<ApiServices> retrofitManager =
                 new RetrofitManager.NetBuilder(this)
-                        .setBaseUrl("https://xbqs.ai-zhizhong.com/")//这里使用 @Url 注解，可以不设置base
+                        .setBaseUrl("http://dldir1.qq.com/qqmi/aphone_p2p/")//这里使用 @Url 注解，可以不设置base
                         .setApiClass(ApiServices.class)
                         //.setIsPrintLog(true)
                         .build();
@@ -605,8 +599,8 @@ public class MainActivity extends AppCompatActivity {
         ApiServices apiServices = retrofitManager.getInstance();
 
         //这需要读写权限
-        Observable<ResponseBody> call = apiServices.downLoadApkFile(apkUrl);
-        DownLoadUtils.downLoad(call, fileDir, fileName, new DownLoadImpl() {
+        Observable<ResponseBody> call = apiServices.downLoadApkFile(DownLoadUtils.getUrlRange(apkUrl,fileDir,fileName),apkUrl);
+        DownLoadUtils.downLoadWithRange(apkUrl,call, fileDir, fileName, new DownLoadImpl() {
             @Override
             public void onProgressCallBack(final int progress) {
                 /**
