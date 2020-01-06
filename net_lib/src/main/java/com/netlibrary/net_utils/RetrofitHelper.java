@@ -1,6 +1,8 @@
 package com.netlibrary.net_utils;
 
 import com.netlibrary.RetrofitController;
+import com.netlibrary.impls.UploadImpl;
+import com.netlibrary.interceptors.ProgressRequestBody;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +37,33 @@ public class RetrofitHelper {
                 File f = entry.getValue();
                 RequestBody requestBody = RequestBody.create(RetrofitController.FORM_TYPE, f);
                 MultipartBody.Part part = MultipartBody.Part.createFormData(entry.getKey(), f.getName(), requestBody);
+                parts.add(part);
+            }
+        } catch (Exception e) {
+            NetLogUtil.d(TAG + " upLoadFile " + e.getMessage());
+        }
+
+        return parts;
+    }
+    /**
+     * 获取 ， 表单上传文件， 带进度回调
+     * @return 需要使用 {@link Part}
+     *
+     * key ： 接口key字段
+     * value：需要上传的文件
+     */
+    public static  List<MultipartBody.Part> getMultipartBodyPartList(Map<String,File> fileMap, UploadImpl uploadImpl) {
+        List<MultipartBody.Part> parts = new ArrayList<>();
+
+        try {
+            for (Map.Entry<String, File> entry : fileMap.entrySet()) {
+                File f = entry.getValue();
+                RequestBody requestBody = RequestBody.create(RetrofitController.FORM_TYPE, f);
+
+                //这里需要将原始的RequestBody进行包装
+                ProgressRequestBody progressRequestBody = new ProgressRequestBody(requestBody, uploadImpl);
+
+                MultipartBody.Part part = MultipartBody.Part.createFormData(entry.getKey(), f.getName(), progressRequestBody);
                 parts.add(part);
             }
         } catch (Exception e) {

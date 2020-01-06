@@ -88,7 +88,12 @@
             android:layout_height="wrap_content"
             android:text="Post文件上传"
             android:textAllCaps="false" />
-
+        <Button
+            android:id="@+id/btn_upload_with_progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Post文件上传,带进度回调"
+            android:textAllCaps="false" />
         <Button
             android:id="@+id/btn_download_post"
             android:layout_width="match_parent"

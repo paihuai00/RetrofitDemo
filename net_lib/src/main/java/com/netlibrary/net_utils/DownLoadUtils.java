@@ -27,6 +27,8 @@ import okhttp3.ResponseBody;
  * 回调{@link DownLoadImpl}
  *
  * 断点续传 Range 获得：{@link DownLoadUtils#getUrlRange(String, String, String)}
+ *
+ * Range： https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Range
  */
 public class DownLoadUtils {
     private static final String TAG = "DownLoadUtils";
@@ -199,7 +201,7 @@ public class DownLoadUtils {
         long range = 0;
         range = SPUtils.get(url, 0l);
 
-        System.out.println("range hahah = " + range);
+        //System.out.println("range hahah = " + range);
 
         //先创建，文件夹
         File dirFile = new File(fileDir);

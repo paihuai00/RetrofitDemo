@@ -1,6 +1,7 @@
 package com.csx.retrofitdemo;
 
 import com.csx.retrofitdemo.beans.VideoJsonBean;
+import com.netlibrary.interceptors.ProgressRequestBody;
 import com.netlibrary.net_utils.DownLoadUtils;
 import io.reactivex.Observable;
 import java.util.List;
@@ -120,7 +121,14 @@ public interface ApiServices {
     @POST("xbqs/Attachment/UploadAttach")
     Observable<ResponseBody> upLoadFile(@Part List<MultipartBody.Part> parts);
 
-
+    /**
+     * 上传文件，带进度回调
+     * @param parts
+     * @return
+     */
+    @Multipart
+    @POST("xbqs/Attachment/UploadAttach")
+    Observable<ProgressRequestBody> upLoadFileWithProgress(@Part List<MultipartBody.Part> parts);
 
 
     @Headers("Cache-Control: max-age=640000")//静态添加单个header

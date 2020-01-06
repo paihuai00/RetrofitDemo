@@ -19,6 +19,8 @@ import com.csx.retrofitdemo.utils.PictureUtils;
 import com.csx.retrofitdemo.utils.RxPermissionUtils;
 import com.luck.picture.lib.PictureSelector;
 import com.luck.picture.lib.entity.LocalMedia;
+import com.netlibrary.impls.UploadImpl;
+import com.netlibrary.interceptors.ProgressRequestBody;
 import com.netlibrary.net_utils.NetLogUtil;
 import com.netlibrary.RetrofitController;
 import com.netlibrary.RetrofitManager;
@@ -46,6 +48,7 @@ import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
+import okio.Okio;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 import retrofit2.http.Streaming;
@@ -68,12 +71,13 @@ import retrofit2.http.Url;
  * - 上传json          {@link MainActivity#postJsonByRequestBody()}
  *
  * 8,Post - 上传file          {@link MainActivity#postFile(String)}
+ *          上传file带进度回调{@link MainActivity#postFileWithProgress(String)}
  *
  * 9，文件下载                 {@link MainActivity#downLoadFile()}
- *                    断点续传 {@link MainActivity#downLoadApkFile()}
+ * 断点续传 {@link MainActivity#downLoadApkFile()}
  *
  * 9,常用类
- * - {@link RetrofitManager},Retrofit 管理类
+ * - {@link RetrofitManager},Retrofit s管理类
  * - {@link RetrofitHelper}，用于生成 RequestBody、MultipartBody
  * - {@link RetrofitController} , 配置类，包含常用的 MediaType，以及RetrofitManager参数
  * - {@link DownLoadUtils}      ,下载utils
@@ -92,7 +96,10 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.btn_upload_post) Button mBtnUploadPost;
     @BindView(R.id.btn_download_post) Button mBtnDownloadPost;
     @BindView(R.id.btn_json_post_requestbody) Button mBtnJsonRequest;
+    @BindView(R.id.btn_upload_with_progress) Button mBtnUploadProgress;
     private String imageLocalPath;
+
+    private boolean isUploadWithProgress = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -299,7 +306,6 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-
     /**
      * post 带参数,请求
      * 表单上传使用：@FormUrlEncoded + @Field
@@ -490,6 +496,66 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * 上传图片到服务器,带进度
+     *
+     * (需要读写权限)
+     */
+    private void postFileWithProgress(String imagePath) {
+        File file = new File(imagePath);
+        if (!file.exists()) {
+            showToast("图片选择有误，请重新选择");
+            return;
+        }
+
+        // http://118.123.20.133:8080/xbqs/user/GetUserVideoListPage
+        String baseUrl = "http://118.123.20.133:8080/";
+
+        RetrofitManager<ApiServices> retrofitManager =
+                new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
+                        .setApiClass(ApiServices.class)
+                        //.setIsPrintLog(true)
+                        .build();
+
+        ApiServices apiServices = retrofitManager.getInstance();
+
+        Map<String, File> fileMap = new HashMap<>();
+        fileMap.put("file", file);
+
+        List<MultipartBody.Part> partList = RetrofitHelper.getMultipartBodyPartList(fileMap, new UploadImpl() {
+            @Override
+            public void onUploadProgress(final int progress) {
+                Log.d(TAG, "onUploadProgress: " + progress+" 当前线程： "+Thread.currentThread().getName());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mTvShowResult.setText("上传进度progress ； " + progress);
+                    }
+                });
+            }
+
+        });
+
+        Observable<ProgressRequestBody> responseBodyObservable = apiServices.upLoadFileWithProgress(partList);
+        responseBodyObservable.compose(SchedulersHelper.<ProgressRequestBody>changeSchedulerObservable())
+                .subscribe(new Consumer<ProgressRequestBody>() {
+                    @Override
+                    public void accept(ProgressRequestBody progressRequestBody) throws Exception {
+                        //主线程
+                        Log.d(TAG, "onResponse: ");
+                        mTvShowResult.setText("文件上传完成!");
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable t) throws Exception {
+                        //主线程
+                        Log.d(TAG, "onFailure: " + t.getMessage().toString());
+                        mTvShowResult.setText("文件上传失败： "+t.getMessage());
+                    }
+                });
+
+    }
+
+    /**
      * 文件下载
      * 注意:
      * 1，{@link Streaming} 注解是否添加
@@ -513,7 +579,7 @@ public class MainActivity extends AppCompatActivity {
 
         //这需要读写权限
         Observable<ResponseBody> call = apiServices.downLoadFile();
-        DownLoadUtils.downLoad(call, fileDir,fileName, new DownLoadImpl() {
+        DownLoadUtils.downLoad(call, fileDir, fileName, new DownLoadImpl() {
             @Override
             public void onProgressCallBack(final int progress) {
                 /**
@@ -586,12 +652,13 @@ public class MainActivity extends AppCompatActivity {
         //http://dldir1.qq.com/qqmi/aphone_p2p/TencentVideo_V6.0.0.14297_848.apk
         String apkUrl = "http://dldir1.qq.com/qqmi/aphone_p2p/TencentVideo_V6.0.0.14297_848.apk";
 
-        final String fileDir = Environment.getExternalStorageDirectory() +File.separator+"down_apk";
-        final String fileName ="tencentvideo.apk";
+        final String fileDir =
+                Environment.getExternalStorageDirectory() + File.separator + "down_apk";
+        final String fileName = "tencentvideo.apk";
 
         RetrofitManager<ApiServices> retrofitManager =
-                new RetrofitManager.NetBuilder(this)
-                        .setBaseUrl("http://dldir1.qq.com/qqmi/aphone_p2p/")//这里使用 @Url 注解，可以不设置base
+                new RetrofitManager.NetBuilder(this).setBaseUrl(
+                        "http://dldir1.qq.com/qqmi/aphone_p2p/")//这里使用 @Url 注解，可以不设置base
                         .setApiClass(ApiServices.class)
                         //.setIsPrintLog(true)
                         .build();
@@ -599,8 +666,10 @@ public class MainActivity extends AppCompatActivity {
         ApiServices apiServices = retrofitManager.getInstance();
 
         //这需要读写权限
-        Observable<ResponseBody> call = apiServices.downLoadApkFile(DownLoadUtils.getUrlRange(apkUrl,fileDir,fileName),apkUrl);
-        DownLoadUtils.downLoadWithRange(apkUrl,call, fileDir, fileName, new DownLoadImpl() {
+        Observable<ResponseBody> call =
+                apiServices.downLoadApkFile(DownLoadUtils.getUrlRange(apkUrl, fileDir, fileName),
+                        apkUrl);
+        DownLoadUtils.downLoadWithRange(apkUrl, call, fileDir, fileName, new DownLoadImpl() {
             @Override
             public void onProgressCallBack(final int progress) {
                 /**
@@ -723,7 +792,7 @@ public class MainActivity extends AppCompatActivity {
     @OnClick({
             R.id.btn_no_params_get, R.id.btn_no_params_path_get, R.id.btn_params_get, R.id.btn_url,
             R.id.btn_normal_post, R.id.btn_params_post, R.id.btn_json_post, R.id.btn_upload_post,
-            R.id.btn_download_post, R.id.btn_json_post_requestbody, R.id.btn_download_apk
+            R.id.btn_download_post, R.id.btn_json_post_requestbody, R.id.btn_download_apk, R.id.btn_upload_with_progress
     })
     public void onClick(View view) {
         Toast.makeText(getApplicationContext(), "所有都已经过测试，如果调不调可以直接替换成自己的接口进行测试", Toast.LENGTH_LONG)
@@ -760,6 +829,7 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onGrant() {
                                 //同意权限，打开图片选择
+                                isUploadWithProgress = false;
                                 PictureUtils.chooseImage(MainActivity.this, true);
                             }
 
@@ -771,6 +841,24 @@ public class MainActivity extends AppCompatActivity {
                         Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA);
 
                 break;
+            case R.id.btn_upload_with_progress:
+                //需要检测权限
+                RxPermissionUtils.requestPermission(this,
+                        new RxPermissionUtils.OnRxPermissionCallBack() {
+                            @Override
+                            public void onGrant() {
+                                //同意权限，打开图片选择
+                                isUploadWithProgress = true;
+                                PictureUtils.chooseImage(MainActivity.this, true);
+                            }
+
+                            @Override
+                            public void onRefuse(boolean isNeverAskAgain) {
+
+                            }
+                        }, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA);
+                break;
+
             case R.id.btn_download_post:
                 //需要检测权限
                 RxPermissionUtils.requestPermission(this,
@@ -825,11 +913,18 @@ public class MainActivity extends AppCompatActivity {
 
                 imageLocalPath = selectListPic.get(0).getCompressPath();
                 NetLogUtil.d(TAG + "  选择图片本地地址为：" + imageLocalPath);
-                postFile(imageLocalPath);
+
+                if (isUploadWithProgress) {
+                    postFileWithProgress(imageLocalPath);
+                } else {
+                    postFile(imageLocalPath);
+                }
+
                 break;
             case RxPermissionUtils.SetInstallRequestCode:
-                boolean isAgreeInstallApk=RxPermissionUtils.isAgreeInstallPackage(MainActivity.this);
-                Log.d(TAG , "  onActivityResult 是否允许安装apk isAgreeInstallApk = "+isAgreeInstallApk);
+                boolean isAgreeInstallApk =
+                        RxPermissionUtils.isAgreeInstallPackage(MainActivity.this);
+                Log.d(TAG, "  onActivityResult 是否允许安装apk isAgreeInstallApk = " + isAgreeInstallApk);
                 if (!isAgreeInstallApk) {
                     showToast("请开启改权限，安装最新的应用！");
                 } else {
@@ -842,6 +937,4 @@ public class MainActivity extends AppCompatActivity {
     public void showToast(String s) {
         Toast.makeText(getApplicationContext(), s, Toast.LENGTH_LONG).show();
     }
-
-
 }
