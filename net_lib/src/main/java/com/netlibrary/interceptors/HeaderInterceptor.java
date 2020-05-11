@@ -10,8 +10,13 @@ import okhttp3.Response;
 /**
  * 请求拦截器  统一添加请求头使用
  */
+public  class HeaderInterceptor implements Interceptor {
 
-public abstract class HeaderInterceptor implements Interceptor {
+    private Map<String, String> headerMap;
+
+    public HeaderInterceptor(Map<String, String> headerMap) {
+        this.headerMap = headerMap;
+    }
 
     @Override
     public Response intercept(Chain chain) throws IOException {
@@ -41,5 +46,7 @@ public abstract class HeaderInterceptor implements Interceptor {
         }
     }
 
-    public abstract Map<String, String> buildHeaders();
+    public  Map<String, String> buildHeaders(){
+        return this.headerMap;
+    }
 }

@@ -1,6 +1,7 @@
 package com.csx.retrofitdemo;
 
 import android.Manifest;
+import android.app.Dialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -13,6 +14,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.csx.retrofitdemo.beans.FuliBean;
 import com.csx.retrofitdemo.beans.VideoJsonBean;
 import com.csx.retrofitdemo.utils.InstallApkUtils;
 import com.csx.retrofitdemo.utils.PictureUtils;
@@ -26,12 +28,17 @@ import com.netlibrary.RetrofitController;
 import com.netlibrary.RetrofitManager;
 import com.netlibrary.impls.DownLoadImpl;
 import com.netlibrary.net_utils.DownLoadUtils;
+import com.netlibrary.net_utils.RequestUtils;
+import com.netlibrary.net_utils.RequestUtils.ResponseCallBack;
 import com.netlibrary.net_utils.RetrofitHelper;
 import com.netlibrary.net_utils.SPUtils;
 import com.netlibrary.net_utils.SchedulersHelper;
 import com.tbruyelle.rxpermissions2.RxPermissions;
 import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -44,6 +51,7 @@ import java.util.Map;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import okhttp3.Call;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
@@ -81,6 +89,9 @@ import retrofit2.http.Url;
  * - {@link RetrofitHelper}，用于生成 RequestBody、MultipartBody
  * - {@link RetrofitController} , 配置类，包含常用的 MediaType，以及RetrofitManager参数
  * - {@link DownLoadUtils}      ,下载utils
+ *
+ *    网络请求
+ * - {@link RequestUtils#requestCall(Observable, Class, ResponseCallBack)}
  */
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -121,33 +132,31 @@ public class MainActivity extends AppCompatActivity {
         //http://gank.io/api/data/%E7%A6%8F%E5%88%A9/6/1
         String baseUrl = "http://gank.io/api/data/%E7%A6%8F%E5%88%A9/";//注意，这里的baseUrl：需要以“/”结尾
         RetrofitManager<ApiServices> retrofitManager =
-                new RetrofitManager.NetBuilder(this).setBaseUrl(baseUrl)
-                        .setApiClass(ApiServices.class)
-                        .build();
+                new RetrofitManager.NetBuilder(this)
+                    .setBaseUrl(baseUrl)
+                    .setApiClass(ApiServices.class)
+                    .build();
 
         ApiServices serivces = retrofitManager.getInstance();
 
         Observable<ResponseBody> call = serivces.getGirlData();
 
-        call.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
-                .subscribe(new Consumer<ResponseBody>() {
-                    @Override
-                    public void accept(ResponseBody responseBody) throws Exception {
-                        try {
-                            String successData = responseBody.string();
-                            mTvShowResult.setText(successData);
-                            Log.d(TAG, "onResponse: successData = " + successData);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable throwable) throws Exception {
-                        Log.d(TAG, "onFailure: " + throwable.getMessage().toString());
-                        mTvShowResult.setText(throwable.getMessage());
-                    }
-                });
+        /**
+         *  disposable 用于生命周期管理
+         */
+        Disposable disposable=RequestUtils.requestCall(call, FuliBean.class, new ResponseCallBack<FuliBean>() {
+            @Override
+            public void onHttpCallSuccess(FuliBean clazz) {
+                String successData = clazz.toString();
+                mTvShowResult.setText(successData);
+            }
+
+            @Override
+            public void onHttpCallFailed(Throwable throwable) {
+                mTvShowResult.setText(throwable.getMessage());
+            }
+        });
+
     }
 
     /**
@@ -167,25 +176,19 @@ public class MainActivity extends AppCompatActivity {
 
         Observable<ResponseBody> call = serivces.getGirlDataByDate("12", "1");
 
-        call.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
-                .subscribe(new Consumer<ResponseBody>() {
-                    @Override
-                    public void accept(ResponseBody responseBody) throws Exception {
-                        try {
-                            String successData = responseBody.string();
-                            mTvShowResult.setText(successData);
-                            Log.d(TAG, "onResponse: successData = " + successData);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable throwable) throws Exception {
-                        Log.d(TAG, "onFailure: " + throwable.getMessage().toString());
-                        mTvShowResult.setText(throwable.getMessage());
-                    }
-                });
+        Disposable disposable = RequestUtils.requestCallOriginal(call,
+            new ResponseCallBack<String>() {
+                @Override
+                public void onHttpCallSuccess(String clazz) {
+                    mTvShowResult.setText(clazz);
+                }
+
+                @Override
+                public void onHttpCallFailed(Throwable throwable) {
+                    mTvShowResult.setText(throwable.getMessage());
+                }
+            });
+
     }
 
     //3,有参get请求
@@ -205,32 +208,21 @@ public class MainActivity extends AppCompatActivity {
 
         ApiServices serivces = retrofitManager.getInstance();
 
-        Observable<WeatherBean> call =
+        Observable<ResponseBody> call =
                 serivces.getWeatherData("北京", "defbffa06a1846fe8bab0b271a9eca6e");
 
-        call.compose(SchedulersHelper.<WeatherBean>changeSchedulerObservable())
-                .subscribe(new Consumer<WeatherBean>() {
-                    @Override
-                    public void accept(WeatherBean weatherBean) throws Exception {
-                        try {
-                            String successData = weatherBean.toString();
-                            mTvShowResult.setText(successData);
-                            Log.d(TAG, "onResponse: successData = " + successData);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable throwable) throws Exception {
-                        try {
-                            mTvShowResult.setText(throwable.getMessage());
-                            Log.d(TAG, "onResponse: throwable = " + throwable.getMessage());
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
+        Disposable disposable = RequestUtils.requestCall(call, WeatherBean.class,
+            new ResponseCallBack<WeatherBean>() {
+                @Override
+                public void onHttpCallSuccess(WeatherBean clazz) {
+                    mTvShowResult.setText(clazz.toString());
+                }
+
+                @Override
+                public void onHttpCallFailed(Throwable throwable) {
+                    mTvShowResult.setText(throwable.getMessage());
+                }
+            });
     }
 
     //4,直接传入Url
@@ -251,24 +243,21 @@ public class MainActivity extends AppCompatActivity {
 
         Observable<ResponseBody> call =
                 serivces.getDataByUrl("http://gank.io/api/data/%E7%A6%8F%E5%88%A9/6/1");
-        call.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
-                .subscribe(new Consumer<ResponseBody>() {
-                    @Override
-                    public void accept(ResponseBody responseBody) throws Exception {
-                        try {
-                            //主线程
-                            String successData = responseBody.string();
-                            mTvShowResult.setText(successData);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable throwable) throws Exception {
-                        mTvShowResult.setText(throwable.getMessage());
-                    }
-                });
+
+      Disposable disposable = RequestUtils.requestCallOriginal(call,
+          new ResponseCallBack<String>() {
+            @Override
+            public void onHttpCallSuccess(String clazz) {
+              showToast("请求成功！");
+              mTvShowResult.setText(clazz);
+            }
+
+            @Override
+            public void onHttpCallFailed(Throwable throwable) {
+              showToast("请求失败！");
+              mTvShowResult.setText(throwable.getMessage());
+            }
+          });
     }
 
     //post 不带参数
@@ -283,27 +272,22 @@ public class MainActivity extends AppCompatActivity {
 
         ApiServices serivces = retrofitManager.getInstance();
 
-        Observable<ResponseBody> responseBodyObservable = serivces.postWithOutParams();
+        Observable<ResponseBody> call = serivces.postWithOutParams();
 
-        responseBodyObservable.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
-                .subscribe(new Consumer<ResponseBody>() {
-                    @Override
-                    public void accept(ResponseBody responseBody) throws Exception {
-                        String successData = null;
-                        try {
-                            successData = responseBody.string();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        mTvShowResult.setText(successData);
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable throwable) throws Exception {
-                        NetLogUtil.d(TAG + " post 不带参数 " + throwable.getMessage());
-                        mTvShowResult.setText("post 不带参数:  请求失败");
-                    }
-                });
+      Disposable disposable = RequestUtils.requestCallOriginal(call,
+          new ResponseCallBack<String>() {
+            @Override
+            public void onHttpCallSuccess(String clazz) {
+              showToast("请求成功！");
+              mTvShowResult.setText(clazz);
+            }
+
+            @Override
+            public void onHttpCallFailed(Throwable throwable) {
+              showToast("请求失败！");
+              mTvShowResult.setText(throwable.getMessage());
+            }
+          });
     }
 
     /**
@@ -323,31 +307,23 @@ public class MainActivity extends AppCompatActivity {
 
         ApiServices apiServices = retrofitManager.getInstance();
 
-        Observable<ResponseBody> observable =
+        Observable<ResponseBody> call =
                 apiServices.postFootBallData("02da4926376156643455fafa48982456", "中超");
 
-        observable.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
-                .subscribe(new Consumer<ResponseBody>() {
-                    @Override
-                    public void accept(ResponseBody responseBody) throws Exception {
-                        //主线程
-                        Log.d(TAG, "onResponse: ");
-                        String successData = null;
-                        try {
-                            successData = responseBody.string();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        mTvShowResult.setText(successData);
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable t) throws Exception {
-                        //主线程
-                        Log.d(TAG, "onFailure: " + t.getMessage().toString());
-                        mTvShowResult.setText(t.getMessage());
-                    }
-                });
+      Disposable disposable = RequestUtils.requestCallOriginal(call,
+          new ResponseCallBack<String>() {
+            @Override
+            public void onHttpCallSuccess(String clazz) {
+              showToast("请求成功！");
+              mTvShowResult.setText(clazz);
+            }
+
+            @Override
+            public void onHttpCallFailed(Throwable throwable) {
+              showToast("请求失败！");
+              mTvShowResult.setText(throwable.getMessage());
+            }
+          });
     }
 
     /**
@@ -371,25 +347,22 @@ public class MainActivity extends AppCompatActivity {
         jsonBean.setPageSize(10);
         jsonBean.setUserId("5dfe7030-595f-4d67-aa56-98c8d9e43837");
 
-        Observable<ResponseBody> bodyObservable = apiServices.postJsonBean(jsonBean);
-        bodyObservable.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
-                .subscribe(new Consumer<ResponseBody>() {
-                    @Override
-                    public void accept(ResponseBody responseBody) throws Exception {
-                        String successData = "";
-                        try {
-                            successData = responseBody.string();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        mTvShowResult.setText(successData.toString());
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable t) throws Exception {
-                        mTvShowResult.setText(t.getMessage());
-                    }
-                });
+        Observable<ResponseBody> call = apiServices.postJsonBean(jsonBean);
+      Disposable disposable = RequestUtils.requestCallOriginal(call,
+          new ResponseCallBack<String>() {
+            @Override
+            public void onHttpCallSuccess(String clazz) {
+              showToast("请求成功！");
+              mTvShowResult.setText(clazz);
+            }
+
+            @Override
+            public void onHttpCallFailed(Throwable throwable) {
+              showToast("请求失败！");
+              mTvShowResult.setText(throwable.getMessage());
+            }
+          });
+
     }
 
     /**
@@ -420,25 +393,23 @@ public class MainActivity extends AppCompatActivity {
         stringObjectMap.put("userId", "5dfe7030-595f-4d67-aa56-98c8d9e43837");
         RequestBody requestBody = RetrofitHelper.getRequestBody(stringObjectMap);
 
-        Observable<ResponseBody> bodyObservable = apiServices.postJsonRequestBody(requestBody);
-        bodyObservable.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
-                .subscribe(new Consumer<ResponseBody>() {
-                    @Override
-                    public void accept(ResponseBody responseBody) throws Exception {
-                        String successData = "";
-                        try {
-                            successData = responseBody.string();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        mTvShowResult.setText(successData.toString());
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable t) throws Exception {
-                        mTvShowResult.setText(t.getMessage());
-                    }
-                });
+        Observable<ResponseBody> call = apiServices.postJsonRequestBody(requestBody);
+
+      Disposable disposable = RequestUtils.requestCallOriginal(call,
+          new ResponseCallBack<String>() {
+            @Override
+            public void onHttpCallSuccess(String clazz) {
+              showToast("请求成功！");
+              mTvShowResult.setText(clazz);
+            }
+
+            @Override
+            public void onHttpCallFailed(Throwable throwable) {
+              showToast("请求失败！");
+              mTvShowResult.setText(throwable.getMessage());
+            }
+          });
+
     }
 
     /**
@@ -469,30 +440,22 @@ public class MainActivity extends AppCompatActivity {
 
         List<MultipartBody.Part> partList = RetrofitHelper.getMultipartBodyPartList(fileMap);
 
-        Observable<ResponseBody> responseBodyObservable = apiServices.upLoadFile(partList);
+        Observable<ResponseBody> call = apiServices.upLoadFile(partList);
 
-        responseBodyObservable.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
-                .subscribe(new Consumer<ResponseBody>() {
-                    @Override
-                    public void accept(ResponseBody responseBody) throws Exception {
-                        //主线程
-                        Log.d(TAG, "onResponse: ");
-                        String successData = null;
-                        try {
-                            successData = responseBody.string();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        mTvShowResult.setText(successData);
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable t) throws Exception {
-                        //主线程
-                        Log.d(TAG, "onFailure: " + t.getMessage().toString());
-                        mTvShowResult.setText(t.getMessage());
-                    }
-                });
+      Disposable disposable = RequestUtils.requestCallOriginal(call,
+          new ResponseCallBack<String>() {
+            @Override
+            public void onHttpCallSuccess(String clazz) {
+              showToast("请求成功！");
+              mTvShowResult.setText(clazz);
+            }
+
+            @Override
+            public void onHttpCallFailed(Throwable throwable) {
+              showToast("请求失败！");
+              mTvShowResult.setText(throwable.getMessage());
+            }
+          });
     }
 
     /**
@@ -528,6 +491,7 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                      System.out.println(" 文件上传： " + progress);
                         mTvShowResult.setText("上传进度progress ； " + progress);
                     }
                 });
@@ -535,24 +499,22 @@ public class MainActivity extends AppCompatActivity {
 
         });
 
-        Observable<ProgressRequestBody> responseBodyObservable = apiServices.upLoadFileWithProgress(partList);
-        responseBodyObservable.compose(SchedulersHelper.<ProgressRequestBody>changeSchedulerObservable())
-                .subscribe(new Consumer<ProgressRequestBody>() {
-                    @Override
-                    public void accept(ProgressRequestBody progressRequestBody) throws Exception {
-                        //主线程
-                        Log.d(TAG, "onResponse: ");
-                        mTvShowResult.setText("文件上传完成!");
-                    }
-                }, new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable t) throws Exception {
-                        //主线程
-                        Log.d(TAG, "onFailure: " + t.getMessage().toString());
-                        mTvShowResult.setText("文件上传失败： "+t.getMessage());
-                    }
-                });
+        Observable<ResponseBody> responseBodyObservable = apiServices.upLoadFileWithProgress(partList);
 
+      Disposable disposable = RequestUtils.requestCallOriginal(responseBodyObservable,
+          new ResponseCallBack<String>() {
+            @Override
+            public void onHttpCallSuccess(String clazz) {
+              showToast("请求成功！");
+              mTvShowResult.setText(clazz);
+            }
+
+            @Override
+            public void onHttpCallFailed(Throwable throwable) {
+              showToast("请求失败！");
+              mTvShowResult.setText(throwable.getMessage());
+            }
+          });
     }
 
     /**
@@ -603,46 +565,6 @@ public class MainActivity extends AppCompatActivity {
                 mTvShowResult.setText("下载失败：" + errorMsg);
             }
         });
-
-        //call.compose(SchedulersHelper.<ResponseBody>changeSchedulerObservable())
-        //        .map(new Function<ResponseBody, File>() {
-        //            @Override
-        //            public File apply(ResponseBody responseBody) throws Exception {
-        //                return new File("");
-        //            }
-        //        })
-        //        .subscribe(new Consumer<File>() {
-        //            @Override
-        //            public void accept(File file) throws Exception {
-        //
-        //            }
-        //        }, new Consumer<Throwable>() {
-        //            @Override
-        //            public void accept(Throwable throwable) throws Exception {
-        //
-        //            }
-        //        });
-
-        //call.enqueue(new Callback<ResponseBody>() {
-        //    @Override
-        //    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-        //        //主线程
-        //        if (response.isSuccessful()) {
-        //            writeFileToSDCard(response.body());
-        //            Toast.makeText(getApplicationContext(), "下载成功！", Toast.LENGTH_SHORT).show();
-        //        } else {
-        //            Toast.makeText(getApplicationContext(), "下载失败！", Toast.LENGTH_SHORT).show();
-        //        }
-        //        //                mTvShowResult.setText(successData);
-        //    }
-        //
-        //    @Override
-        //    public void onFailure(Call<ResponseBody> call, Throwable t) {
-        //        //主线程
-        //        Log.d(TAG, "onFailure: " + t.getMessage().toString());
-        //        mTvShowResult.setText(t.getMessage());
-        //    }
-        //});
     }
 
     /**
@@ -737,10 +659,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private RequestBody toRequestBody(String value) {
-        RequestBody requestBody = RequestBody.create(MediaType.parse("text/plain"), value);
-        return requestBody;
-    }
 
     /**
      * okhttp 可以进行的设置，retrofit也可以

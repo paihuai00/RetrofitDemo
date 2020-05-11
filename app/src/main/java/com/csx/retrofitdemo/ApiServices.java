@@ -1,6 +1,7 @@
 package com.csx.retrofitdemo;
 
 import com.csx.retrofitdemo.beans.VideoJsonBean;
+import com.netlibrary.beans.BaseHttpResult;
 import com.netlibrary.interceptors.ProgressRequestBody;
 import com.netlibrary.net_utils.DownLoadUtils;
 import io.reactivex.Observable;
@@ -49,7 +50,7 @@ public interface ApiServices {
 
     //有参数get
     @GET("v5/hourly")
-    Observable<WeatherBean> getWeatherData(@Query("city") String city,
+    Observable<ResponseBody> getWeatherData(@Query("city") String city,
                                      @Query("key") String key);
 
     Call<WeatherBean> getWeatherData(@QueryMap Map<String, String> params);
@@ -128,18 +129,8 @@ public interface ApiServices {
      */
     @Multipart
     @POST("xbqs/Attachment/UploadAttach")
-    Observable<ProgressRequestBody> upLoadFileWithProgress(@Part List<MultipartBody.Part> parts);
+    Observable<ResponseBody> upLoadFileWithProgress(@Part List<MultipartBody.Part> parts);
 
-
-    @Headers("Cache-Control: max-age=640000")//静态添加单个header
-    @GET("")
-    Call<ResponseBody> addHeadData();
-
-    @GET("")
-    Call<ResponseBody> addHeadData(@Header("Cache-Control") String headsMap);
-
-    @GET("")
-    Call<ResponseBody> addHeadData(@HeaderMap Map<String,String> headsMap);
 
 }
 

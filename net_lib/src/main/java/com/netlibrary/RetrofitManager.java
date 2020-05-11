@@ -7,16 +7,21 @@ import com.franmontiel.persistentcookiejar.cache.SetCookieCache;
 import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor;
 import com.ihsanbal.logging.Level;
 import com.ihsanbal.logging.LoggingInterceptor;
+import com.netlibrary.data_convert.MyGsonConverterFactory;
+import com.netlibrary.interceptors.HeaderInterceptor;
 import com.netlibrary.net_utils.DownLoadUtils;
 import com.netlibrary.net_utils.HttpSslUtils;
 import com.netlibrary.net_utils.NetLogUtil;
 import com.netlibrary.net_utils.RetrofitHelper;
 import com.netlibrary.net_utils.SPUtils;
 import java.io.File;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import okhttp3.Cache;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.internal.platform.Platform;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
@@ -47,6 +52,7 @@ public class RetrofitManager<T> {
     private Level mLevel = Level.BASIC; //日志打印级别，默认是 BASIC
     public boolean isNeedPersistentCookie = false;//是否需要持久化cookie
     private boolean isTrustAllCer = false;//是否相信所有证书
+    private Map<String, String> headerMap;//公共header
     private String cerString;//证书string
     private int[] cerResIds;//证书资源
 
@@ -111,6 +117,10 @@ public class RetrofitManager<T> {
 
     private void setPersistentCookie(boolean isNeedPersistentCookie) { this.isNeedPersistentCookie = isNeedPersistentCookie; }
 
+    //添加公共的header
+    private void setHeaderMap(Map<String, String> headerMap) {
+        this.headerMap = headerMap;
+    }
 
     //是否相信所有证书
     private void setTrustAllCertificate(boolean isTrustALL) {
@@ -141,10 +151,12 @@ public class RetrofitManager<T> {
 
         initOkhttpClient();
 
-        normalRetrofit = new Retrofit.Builder().client(okHttpClient)
+
+        normalRetrofit = new Retrofit.Builder()
+            .client(okHttpClient)
                 .baseUrl(baseUrl)
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-                .addConverterFactory(GsonConverterFactory.create())
+                .addConverterFactory(MyGsonConverterFactory.create())
                 .build();
 
         return normalRetrofit.create(apiClass);
@@ -201,6 +213,12 @@ public class RetrofitManager<T> {
                                 .response("Net_Response")
                                 .build();
                 builder.addInterceptor(loggingInterceptor);
+            }
+
+            //手动添加 header, 通过构建拦截器
+            if (headerMap != null && !headerMap.isEmpty()) {
+                HeaderInterceptor headerInterceptor = new HeaderInterceptor(headerMap);
+                builder.addInterceptor(headerInterceptor);
             }
 
             //将手动添加的拦截器组装起来
@@ -275,6 +293,11 @@ public class RetrofitManager<T> {
             return this;
         }
 
+        public NetBuilder setHeaders(Map<String, String> headerMap) {
+            retrofitController.headerMap = headerMap;
+            return this;
+        }
+
         /**
          * 设置超时时间
          */
@@ -325,7 +348,7 @@ public class RetrofitManager<T> {
         }
 
         public RetrofitManager build() {
-            RetrofitManager retrofitManager = new RetrofitManager(retrofitController.mContext);
+            RetrofitManager<T> retrofitManager = new RetrofitManager(retrofitController.mContext);
 
             if (!TextUtils.isEmpty(retrofitController.baseUrl)) {
                 retrofitManager.setBaseUrl(retrofitController.baseUrl);
@@ -350,6 +373,11 @@ public class RetrofitManager<T> {
 
             if (retrofitController.readTimeOut != 0) {
                 retrofitManager.setReadTimeOut(retrofitController.readTimeOut);
+            }
+
+            //添加公共头
+            if (retrofitController.headerMap != null && !retrofitController.headerMap.isEmpty()) {
+                retrofitManager.setHeaderMap(retrofitController.headerMap);
             }
 
             if (retrofitController.interceptors!=null&&retrofitController.interceptors.length!=0)

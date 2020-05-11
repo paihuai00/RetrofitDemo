@@ -3,6 +3,7 @@ package com.netlibrary;
 import android.content.Context;
 import com.ihsanbal.logging.Level;
 import java.io.File;
+import java.util.Map;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
 
@@ -36,6 +37,7 @@ public class RetrofitController {
     public long readTimeOut;
     public long cacheSize;//缓存大小
     public Level mLogLevel;
+    public Map<String, String> headerMap;//添加公共的header
 
     //拦截器
     public Interceptor[] interceptors;
